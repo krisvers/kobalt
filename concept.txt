@@ -1,0 +1,31 @@
+similar to metal in complexity, supporting newer features in dx12, metal, and vulkan
+meant to be simple to learn while introducing newer graphics API concepts
+
+programming style
+    C++ first, but avoiding OOP abuse (semi-orthodox) and avoid too much STL use
+
+mock-up interface
+    bool kobalt::createDefaultDevice(kobalt::Device& dev, kobalt::DeviceSupport support);
+    bool kobalt::createDevice(kobalt::Device& dev, uint32_t id, kobalt::DeviceSupport support);
+
+    bool kobalt::createVertexInputState(kobalt::VertexInputState& vertexInputState, kobalt::Topology topology, kobalt::VertexAttribute const* vertexAttributes, uint32_t vertexAttributeCount, kobalt::VertexBinding const* vertexBindings, uint32_t vertexBindingCount);
+
+    bool kobalt::createBuffer(kobalt::Buffer& buffer, kobalt::Device dev, size_t size, kobalt::MemoryLocation location, kobalt::BufferUsage usage);
+    bool kobalt::uploadBufferData(kobalt::Buffer buffer, void const* data, size_t size);
+    bool kobalt::downloadBufferData(kobalt::Buffer buffer, void* data, size_t size);
+
+    bool kobalt::createTexture2D(kobalt::Texture& texture, kobalt::Device dev, uint32_t width, uint32_t height, kobalt::MemoryLocation location, kobalt::TextureUsage usage);
+    bool kobalt::createTexture3D(kobalt::Texture& texture, kobalt::Device dev, uint32_t width, uint32_t height, uint32_t depth, kobalt::MemoryLocation location, kobalt::TextureUsage usage);
+    bool kobalt::createTexture2DArray(kobalt::Texture& texture, kobalt::Device dev, uint32_t width, uint32_t height, uint32_t layers, kobalt::MemoryLocation location, kobalt::TextureUsage usage);
+    bool kobalt::createTexture3DArray(kobalt::Texture& texture, kobalt::Device dev, uint32_t width, uint32_t height, uint32_t depth, uint32_t layers, kobalt::MemoryLocation location, kobalt::TextureUsage usage);
+
+    bool kobalt::createCommandList(kobalt::CommandList& commandList, kobalt::Device dev, kobalt::CommandListSpecialization specialization);
+    bool kobalt::createSecondaryCommandList(kobalt::CommandList& commandList, kobalt::Device dev);
+    bool kobalt::executeCommandList(kobalt::CommandList commandList);
+
+    bool kobalt::cmd::beginRecording(kobalt::CommandList commandList);
+    bool kobalt::cmd::bindGraphicsPipeline(kobalt::CommandList commandList, kobalt::GraphicsPipeline pipeline);
+    bool kobalt::cmd::bindVertexBuffer(kobalt::CommandList commandList, uint32_t index, kobalt::Buffer buffer, uint64_t offset);
+    bool kobalt::cmd::bindIndexBuffer(kobalt::CommandList commandList, kobalt::Buffer buffer, uint64_t offset);
+    bool kobalt::cmd::appendSecondaryCommandList(kobalt::CommandList commandList, kobalt::CommandList secondaryList);
+    bool kobalt::cmd::endRecording(kobalt::ComamndList commandList);

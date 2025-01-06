@@ -1,0 +1,1412 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 54;
+	objects = {
+
+/* Begin PBXAggregateTarget section */
+		415094795476C776D3D52BC2 /* ALL_BUILD */ = {
+			isa = PBXAggregateTarget;
+			buildConfigurationList = 169E3CDCD076483DBF1B879A /* Build configuration list for PBXAggregateTarget "ALL_BUILD" */;
+			buildPhases = (
+				CBA1D3A81BDE872D06952E42 /* Generate CMakeFiles/ALL_BUILD */,
+			);
+			dependencies = (
+				8FFED41449604CFF87B3ACAC /* PBXTargetDependency */,
+				93B2C0CBEF4F415D9A568DD8 /* PBXTargetDependency */,
+			);
+			name = ALL_BUILD;
+			productName = ALL_BUILD;
+		};
+		FF9902E9E4A1F6334F7F01B7 /* ZERO_CHECK */ = {
+			isa = PBXAggregateTarget;
+			buildConfigurationList = 4ECD972BF48342F8A7E50DA4 /* Build configuration list for PBXAggregateTarget "ZERO_CHECK" */;
+			buildPhases = (
+				E971E99D7A4970CD5C519487 /* Generate CMakeFiles/ZERO_CHECK */,
+			);
+			dependencies = (
+			);
+			name = ZERO_CHECK;
+			productName = ZERO_CHECK;
+		};
+/* End PBXAggregateTarget section */
+
+/* Begin PBXBuildFile section */
+		6A11A7E833144EE581D15A90 /* main.cpp in Sources */ = {isa = PBXBuildFile; fileRef = DD284CCC1151488C85D458EB /* main.cpp */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		677D727FA37E4DF5A3DEA9DC /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 7529AD2200E148F7BBB8FE92 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = FF9902E9E4A1F6334F7F01B7;
+			remoteInfo = ZERO_CHECK;
+		};
+		8444F1A9A2A84FAEAD533C08 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 7529AD2200E148F7BBB8FE92 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = FF9902E9E4A1F6334F7F01B7;
+			remoteInfo = ZERO_CHECK;
+		};
+		DD88E64299274547ACF9F79F /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 7529AD2200E148F7BBB8FE92 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 8A9EB9E43E63C7B9289980CF;
+			remoteInfo = kobalt;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXFileReference section */
+		260311EE25664AC58E1899C4 /* kobalt */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; path = kobalt; sourceTree = BUILT_PRODUCTS_DIR; };
+		5157FEFE8D984AFE9EBD7028 /* kobalt.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.c.h; fileEncoding = 4; path = kobalt.h; sourceTree = SOURCE_ROOT; };
+		8CFA0E1D2D29F3B1005D592B /* 82b82416624d2658e5098eb0a28c15c5-common-args.resp */ = {isa = PBXFileReference; lastKnownFileType = text; path = "82b82416624d2658e5098eb0a28c15c5-common-args.resp"; sourceTree = "<group>"; };
+		8CFA0E202D29F3B1005D592B /* kobalt.DependencyMetadataFileList */ = {isa = PBXFileReference; lastKnownFileType = text; path = kobalt.DependencyMetadataFileList; sourceTree = "<group>"; };
+		8CFA0E232D29F3B1005D592B /* 19f546be2e17e6ef6e0307d320d14347 */ = {isa = PBXFileReference; lastKnownFileType = text.script.sh; path = 19f546be2e17e6ef6e0307d320d14347; sourceTree = "<group>"; };
+		8CFA0E242D29F3B1005D592B /* 63a73eaa34565496662df156e6710acc */ = {isa = PBXFileReference; lastKnownFileType = text; path = 63a73eaa34565496662df156e6710acc; sourceTree = "<group>"; };
+		8CFA0E252D29F3B1005D592B /* d41d8cd98f00b204e9800998ecf8427e */ = {isa = PBXFileReference; lastKnownFileType = text; path = d41d8cd98f00b204e9800998ecf8427e; sourceTree = "<group>"; };
+		8CFA0E262D29F3B1005D592B /* fa4fe572f34a184de48ac4863c917f8f */ = {isa = PBXFileReference; lastKnownFileType = text; path = fa4fe572f34a184de48ac4863c917f8f; sourceTree = "<group>"; };
+		8CFA0E282D29F3B1005D592B /* build-request.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "build-request.json"; sourceTree = "<group>"; };
+		8CFA0E292D29F3B1005D592B /* description.msgpack */ = {isa = PBXFileReference; lastKnownFileType = file; path = description.msgpack; sourceTree = "<group>"; };
+		8CFA0E2A2D29F3B1005D592B /* manifest.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = manifest.json; sourceTree = "<group>"; };
+		8CFA0E2B2D29F3B1005D592B /* target-graph.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = "target-graph.txt"; sourceTree = "<group>"; };
+		8CFA0E2C2D29F3B1005D592B /* task-store.msgpack */ = {isa = PBXFileReference; lastKnownFileType = file; path = "task-store.msgpack"; sourceTree = "<group>"; };
+		8CFA0E2E2D29F3B1005D592B /* 19f546be2e17e6ef6e0307d320d14347 */ = {isa = PBXFileReference; lastKnownFileType = text.script.sh; path = 19f546be2e17e6ef6e0307d320d14347; sourceTree = "<group>"; };
+		8CFA0E2F2D29F3B1005D592B /* 63a73eaa34565496662df156e6710acc */ = {isa = PBXFileReference; lastKnownFileType = text; path = 63a73eaa34565496662df156e6710acc; sourceTree = "<group>"; };
+		8CFA0E302D29F3B1005D592B /* a51551c9d91c1a367693ffa4732dedf6 */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = a51551c9d91c1a367693ffa4732dedf6; sourceTree = "<group>"; };
+		8CFA0E312D29F3B1005D592B /* d41d8cd98f00b204e9800998ecf8427e */ = {isa = PBXFileReference; lastKnownFileType = text; path = d41d8cd98f00b204e9800998ecf8427e; sourceTree = "<group>"; };
+		8CFA0E322D29F3B1005D592B /* fa4fe572f34a184de48ac4863c917f8f */ = {isa = PBXFileReference; lastKnownFileType = text; path = fa4fe572f34a184de48ac4863c917f8f; sourceTree = "<group>"; };
+		8CFA0E342D29F3B1005D592B /* build-request.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "build-request.json"; sourceTree = "<group>"; };
+		8CFA0E352D29F3B1005D592B /* description.msgpack */ = {isa = PBXFileReference; lastKnownFileType = file; path = description.msgpack; sourceTree = "<group>"; };
+		8CFA0E362D29F3B1005D592B /* manifest.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = manifest.json; sourceTree = "<group>"; };
+		8CFA0E372D29F3B1005D592B /* target-graph.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = "target-graph.txt"; sourceTree = "<group>"; };
+		8CFA0E382D29F3B1005D592B /* task-store.msgpack */ = {isa = PBXFileReference; lastKnownFileType = file; path = "task-store.msgpack"; sourceTree = "<group>"; };
+		8CFA0E3A2D29F3B1005D592B /* build.db */ = {isa = PBXFileReference; lastKnownFileType = file; path = build.db; sourceTree = "<group>"; };
+		8CFA0E3D2D29F3B1005D592B /* Entitlements.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Entitlements.plist; sourceTree = "<group>"; };
+		8CFA0E3F2D29F3B1005D592B /* 7187679823f38a2a940e0043cdf9d637-common-args.resp */ = {isa = PBXFileReference; lastKnownFileType = text; path = "7187679823f38a2a940e0043cdf9d637-common-args.resp"; sourceTree = "<group>"; };
+		8CFA0E402D29F3B1005D592B /* CMakeCCompilerId.d */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.dtrace; path = CMakeCCompilerId.d; sourceTree = "<group>"; };
+		8CFA0E412D29F3B1005D592B /* CMakeCCompilerId.dia */ = {isa = PBXFileReference; lastKnownFileType = file; path = CMakeCCompilerId.dia; sourceTree = "<group>"; };
+		8CFA0E422D29F3B1005D592B /* CMakeCCompilerId.o */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.objfile"; path = CMakeCCompilerId.o; sourceTree = "<group>"; };
+		8CFA0E432D29F3B1005D592B /* CompilerIdC.LinkFileList */ = {isa = PBXFileReference; lastKnownFileType = text; path = CompilerIdC.LinkFileList; sourceTree = "<group>"; };
+		8CFA0E442D29F3B1005D592B /* CompilerIdC_dependency_info.dat */ = {isa = PBXFileReference; lastKnownFileType = file; path = CompilerIdC_dependency_info.dat; sourceTree = "<group>"; };
+		8CFA0E472D29F3B1005D592B /* CompilerIdC.DependencyMetadataFileList */ = {isa = PBXFileReference; lastKnownFileType = text; path = CompilerIdC.DependencyMetadataFileList; sourceTree = "<group>"; };
+		8CFA0E482D29F3B1005D592B /* CompilerIdC.hmap */ = {isa = PBXFileReference; lastKnownFileType = file; path = CompilerIdC.hmap; sourceTree = "<group>"; };
+		8CFA0E492D29F3B1005D592B /* CompilerIdC.xcent */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = CompilerIdC.xcent; sourceTree = "<group>"; };
+		8CFA0E4A2D29F3B1005D592B /* CompilerIdC-all-non-framework-target-headers.hmap */ = {isa = PBXFileReference; lastKnownFileType = file; path = "CompilerIdC-all-non-framework-target-headers.hmap"; sourceTree = "<group>"; };
+		8CFA0E4B2D29F3B1005D592B /* CompilerIdC-all-target-headers.hmap */ = {isa = PBXFileReference; lastKnownFileType = file; path = "CompilerIdC-all-target-headers.hmap"; sourceTree = "<group>"; };
+		8CFA0E4C2D29F3B1005D592B /* CompilerIdC-generated-files.hmap */ = {isa = PBXFileReference; lastKnownFileType = file; path = "CompilerIdC-generated-files.hmap"; sourceTree = "<group>"; };
+		8CFA0E4D2D29F3B1005D592B /* CompilerIdC-own-target-headers.hmap */ = {isa = PBXFileReference; lastKnownFileType = file; path = "CompilerIdC-own-target-headers.hmap"; sourceTree = "<group>"; };
+		8CFA0E4E2D29F3B1005D592B /* CompilerIdC-project-headers.hmap */ = {isa = PBXFileReference; lastKnownFileType = file; path = "CompilerIdC-project-headers.hmap"; sourceTree = "<group>"; };
+		8CFA0E4F2D29F3B1005D592B /* CompilerIdC.xcent.der */ = {isa = PBXFileReference; lastKnownFileType = file; path = CompilerIdC.xcent.der; sourceTree = "<group>"; };
+		8CFA0E502D29F3B1005D592B /* Script-2C8FEB8E15DC1A1A00E56A5D.sh */ = {isa = PBXFileReference; lastKnownFileType = text.script.sh; path = "Script-2C8FEB8E15DC1A1A00E56A5D.sh"; sourceTree = "<group>"; };
+		8CFA0E522D29F3B1005D592B /* all-product-headers.yaml */ = {isa = PBXFileReference; lastKnownFileType = text.yaml; path = "all-product-headers.yaml"; sourceTree = "<group>"; };
+		8CFA0E592D29F3B1005D592B /* 8bba4233626f64a7ea772bb94a08a1a9 */ = {isa = PBXFileReference; lastKnownFileType = text; path = 8bba4233626f64a7ea772bb94a08a1a9; sourceTree = "<group>"; };
+		8CFA0E5A2D29F3B1005D592B /* 21cf9453263a64d25e28bde810024fd3 */ = {isa = PBXFileReference; lastKnownFileType = text; path = 21cf9453263a64d25e28bde810024fd3; sourceTree = "<group>"; };
+		8CFA0E5B2D29F3B1005D592B /* 177becd055ce63eae4d9f1e7ec0ce515 */ = {isa = PBXFileReference; lastKnownFileType = text.script.sh; path = 177becd055ce63eae4d9f1e7ec0ce515; sourceTree = "<group>"; };
+		8CFA0E5C2D29F3B1005D592B /* 5317b6f61cb1487d29dd5b9afb05213e */ = {isa = PBXFileReference; lastKnownFileType = text; path = 5317b6f61cb1487d29dd5b9afb05213e; sourceTree = "<group>"; };
+		8CFA0E5D2D29F3B1005D592B /* a51551c9d91c1a367693ffa4732dedf6 */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = a51551c9d91c1a367693ffa4732dedf6; sourceTree = "<group>"; };
+		8CFA0E5E2D29F3B1005D592B /* d41d8cd98f00b204e9800998ecf8427e */ = {isa = PBXFileReference; lastKnownFileType = text; path = d41d8cd98f00b204e9800998ecf8427e; sourceTree = "<group>"; };
+		8CFA0E5F2D29F3B1005D592B /* fd8314defc70a8778956f026c0ddfd19 */ = {isa = PBXFileReference; lastKnownFileType = file; path = fd8314defc70a8778956f026c0ddfd19; sourceTree = "<group>"; };
+		8CFA0E612D29F3B1005D592B /* build-request.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "build-request.json"; sourceTree = "<group>"; };
+		8CFA0E622D29F3B1005D592B /* description.msgpack */ = {isa = PBXFileReference; lastKnownFileType = file; path = description.msgpack; sourceTree = "<group>"; };
+		8CFA0E632D29F3B1005D592B /* manifest.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = manifest.json; sourceTree = "<group>"; };
+		8CFA0E642D29F3B1005D592B /* target-graph.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = "target-graph.txt"; sourceTree = "<group>"; };
+		8CFA0E652D29F3B1005D592B /* task-store.msgpack */ = {isa = PBXFileReference; lastKnownFileType = file; path = "task-store.msgpack"; sourceTree = "<group>"; };
+		8CFA0E672D29F3B1005D592B /* build.db */ = {isa = PBXFileReference; lastKnownFileType = file; path = build.db; sourceTree = "<group>"; };
+		8CFA0E692D29F3B1005D592B /* CMakeCCompilerId.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = CMakeCCompilerId.c; sourceTree = "<group>"; };
+		8CFA0E6A2D29F3B1005D592B /* CompilerIdC */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.executable"; path = CompilerIdC; sourceTree = "<group>"; };
+		8CFA0E6B2D29F3B1005D592B /* CompilerIdC.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; path = CompilerIdC.xcodeproj; sourceTree = "<group>"; };
+		8CFA0E6D2D29F3B1005D592B /* Entitlements.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Entitlements.plist; sourceTree = "<group>"; };
+		8CFA0E6F2D29F3B1005D592B /* 82b82416624d2658e5098eb0a28c15c5-common-args.resp */ = {isa = PBXFileReference; lastKnownFileType = text; path = "82b82416624d2658e5098eb0a28c15c5-common-args.resp"; sourceTree = "<group>"; };
+		8CFA0E702D29F3B1005D592B /* CMakeCXXCompilerId.d */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.dtrace; path = CMakeCXXCompilerId.d; sourceTree = "<group>"; };
+		8CFA0E712D29F3B1005D592B /* CMakeCXXCompilerId.dia */ = {isa = PBXFileReference; lastKnownFileType = file; path = CMakeCXXCompilerId.dia; sourceTree = "<group>"; };
+		8CFA0E722D29F3B1005D592B /* CMakeCXXCompilerId.o */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.objfile"; path = CMakeCXXCompilerId.o; sourceTree = "<group>"; };
+		8CFA0E732D29F3B1005D592B /* CompilerIdCXX.LinkFileList */ = {isa = PBXFileReference; lastKnownFileType = text; path = CompilerIdCXX.LinkFileList; sourceTree = "<group>"; };
+		8CFA0E742D29F3B1005D592B /* CompilerIdCXX_dependency_info.dat */ = {isa = PBXFileReference; lastKnownFileType = file; path = CompilerIdCXX_dependency_info.dat; sourceTree = "<group>"; };
+		8CFA0E772D29F3B1005D592B /* CompilerIdCXX.DependencyMetadataFileList */ = {isa = PBXFileReference; lastKnownFileType = text; path = CompilerIdCXX.DependencyMetadataFileList; sourceTree = "<group>"; };
+		8CFA0E782D29F3B1005D592B /* CompilerIdCXX.hmap */ = {isa = PBXFileReference; lastKnownFileType = file; path = CompilerIdCXX.hmap; sourceTree = "<group>"; };
+		8CFA0E792D29F3B1005D592B /* CompilerIdCXX.xcent */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = CompilerIdCXX.xcent; sourceTree = "<group>"; };
+		8CFA0E7A2D29F3B1005D592B /* CompilerIdCXX-all-non-framework-target-headers.hmap */ = {isa = PBXFileReference; lastKnownFileType = file; path = "CompilerIdCXX-all-non-framework-target-headers.hmap"; sourceTree = "<group>"; };
+		8CFA0E7B2D29F3B1005D592B /* CompilerIdCXX-all-target-headers.hmap */ = {isa = PBXFileReference; lastKnownFileType = file; path = "CompilerIdCXX-all-target-headers.hmap"; sourceTree = "<group>"; };
+		8CFA0E7C2D29F3B1005D592B /* CompilerIdCXX-generated-files.hmap */ = {isa = PBXFileReference; lastKnownFileType = file; path = "CompilerIdCXX-generated-files.hmap"; sourceTree = "<group>"; };
+		8CFA0E7D2D29F3B1005D592B /* CompilerIdCXX-own-target-headers.hmap */ = {isa = PBXFileReference; lastKnownFileType = file; path = "CompilerIdCXX-own-target-headers.hmap"; sourceTree = "<group>"; };
+		8CFA0E7E2D29F3B1005D592B /* CompilerIdCXX-project-headers.hmap */ = {isa = PBXFileReference; lastKnownFileType = file; path = "CompilerIdCXX-project-headers.hmap"; sourceTree = "<group>"; };
+		8CFA0E7F2D29F3B1005D592B /* CompilerIdCXX.xcent.der */ = {isa = PBXFileReference; lastKnownFileType = file; path = CompilerIdCXX.xcent.der; sourceTree = "<group>"; };
+		8CFA0E802D29F3B1005D592B /* Script-2C8FEB8E15DC1A1A00E56A5D.sh */ = {isa = PBXFileReference; lastKnownFileType = text.script.sh; path = "Script-2C8FEB8E15DC1A1A00E56A5D.sh"; sourceTree = "<group>"; };
+		8CFA0E822D29F3B1005D592B /* all-product-headers.yaml */ = {isa = PBXFileReference; lastKnownFileType = text.yaml; path = "all-product-headers.yaml"; sourceTree = "<group>"; };
+		8CFA0E892D29F3B1005D592B /* 1ae5a6bf47430b631e96b9616c8f3764 */ = {isa = PBXFileReference; lastKnownFileType = text; path = 1ae5a6bf47430b631e96b9616c8f3764; sourceTree = "<group>"; };
+		8CFA0E8A2D29F3B1005D592B /* 8bba4233626f64a7ea772bb94a08a1a9 */ = {isa = PBXFileReference; lastKnownFileType = text; path = 8bba4233626f64a7ea772bb94a08a1a9; sourceTree = "<group>"; };
+		8CFA0E8B2D29F3B1005D592B /* 8e318c4b9ba57dd4fc8fe18995b41250 */ = {isa = PBXFileReference; lastKnownFileType = text; path = 8e318c4b9ba57dd4fc8fe18995b41250; sourceTree = "<group>"; };
+		8CFA0E8C2D29F3B1005D592B /* 177becd055ce63eae4d9f1e7ec0ce515 */ = {isa = PBXFileReference; lastKnownFileType = text.script.sh; path = 177becd055ce63eae4d9f1e7ec0ce515; sourceTree = "<group>"; };
+		8CFA0E8D2D29F3B1005D592B /* a51551c9d91c1a367693ffa4732dedf6 */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = a51551c9d91c1a367693ffa4732dedf6; sourceTree = "<group>"; };
+		8CFA0E8E2D29F3B1005D592B /* d41d8cd98f00b204e9800998ecf8427e */ = {isa = PBXFileReference; lastKnownFileType = text; path = d41d8cd98f00b204e9800998ecf8427e; sourceTree = "<group>"; };
+		8CFA0E8F2D29F3B1005D592B /* fd8314defc70a8778956f026c0ddfd19 */ = {isa = PBXFileReference; lastKnownFileType = file; path = fd8314defc70a8778956f026c0ddfd19; sourceTree = "<group>"; };
+		8CFA0E912D29F3B1005D592B /* build-request.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "build-request.json"; sourceTree = "<group>"; };
+		8CFA0E922D29F3B1005D592B /* description.msgpack */ = {isa = PBXFileReference; lastKnownFileType = file; path = description.msgpack; sourceTree = "<group>"; };
+		8CFA0E932D29F3B1005D592B /* manifest.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = manifest.json; sourceTree = "<group>"; };
+		8CFA0E942D29F3B1005D592B /* target-graph.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = "target-graph.txt"; sourceTree = "<group>"; };
+		8CFA0E952D29F3B1005D592B /* task-store.msgpack */ = {isa = PBXFileReference; lastKnownFileType = file; path = "task-store.msgpack"; sourceTree = "<group>"; };
+		8CFA0E972D29F3B1005D592B /* build.db */ = {isa = PBXFileReference; lastKnownFileType = file; path = build.db; sourceTree = "<group>"; };
+		8CFA0E992D29F3B1005D592B /* CMakeCXXCompilerId.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = CMakeCXXCompilerId.cpp; sourceTree = "<group>"; };
+		8CFA0E9A2D29F3B1005D592B /* CompilerIdCXX */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.executable"; path = CompilerIdCXX; sourceTree = "<group>"; };
+		8CFA0E9B2D29F3B1005D592B /* CompilerIdCXX.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; path = CompilerIdCXX.xcodeproj; sourceTree = "<group>"; };
+		8CFA0E9D2D29F3B1005D592B /* CMakeCCompiler.cmake */ = {isa = PBXFileReference; lastKnownFileType = text; path = CMakeCCompiler.cmake; sourceTree = "<group>"; };
+		8CFA0E9E2D29F3B1005D592B /* CMakeCXXCompiler.cmake */ = {isa = PBXFileReference; lastKnownFileType = text; path = CMakeCXXCompiler.cmake; sourceTree = "<group>"; };
+		8CFA0E9F2D29F3B1005D592B /* CMakeDetermineCompilerABI_C.bin */ = {isa = PBXFileReference; lastKnownFileType = archive.macbinary; path = CMakeDetermineCompilerABI_C.bin; sourceTree = "<group>"; };
+		8CFA0EA02D29F3B1005D592B /* CMakeDetermineCompilerABI_CXX.bin */ = {isa = PBXFileReference; lastKnownFileType = archive.macbinary; path = CMakeDetermineCompilerABI_CXX.bin; sourceTree = "<group>"; };
+		8CFA0EA12D29F3B1005D592B /* CMakeSystem.cmake */ = {isa = PBXFileReference; lastKnownFileType = text; path = CMakeSystem.cmake; sourceTree = "<group>"; };
+		8CFA0EA52D29F3B1005D592B /* cmake.check_cache */ = {isa = PBXFileReference; lastKnownFileType = text; path = cmake.check_cache; sourceTree = "<group>"; };
+		8CFA0EA62D29F3B1005D592B /* CMakeConfigureLog.yaml */ = {isa = PBXFileReference; lastKnownFileType = text.yaml; path = CMakeConfigureLog.yaml; sourceTree = "<group>"; };
+		8CFA0EA72D29F3B1005D592B /* TargetDirectories.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = TargetDirectories.txt; sourceTree = "<group>"; };
+		8CFA0EA92D29F3B1005D592B /* ReRunCMake.make */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.make; path = ReRunCMake.make; sourceTree = "<group>"; };
+		8CFA0EAC2D29F3B1005D592B /* cmake_install.cmake */ = {isa = PBXFileReference; lastKnownFileType = text; path = cmake_install.cmake; sourceTree = "<group>"; };
+		8CFA0EAD2D29F3B1005D592B /* CMakeCache.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = CMakeCache.txt; sourceTree = "<group>"; };
+		8CFA0EAE2D29F3B1005D592B /* kobalt.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; path = kobalt.xcodeproj; sourceTree = "<group>"; };
+		8CFA0EB02D29F3B1005D592B /* CMakeLists.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = CMakeLists.txt; sourceTree = "<group>"; };
+		8CFA0EB12D29F3B1005D592B /* concept.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = concept.txt; sourceTree = "<group>"; };
+		8CFA0EB22D29F3B1005D592B /* kobalt.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = kobalt.h; sourceTree = "<group>"; };
+		8CFA0EB32D29F3B1005D592B /* main.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = main.cpp; sourceTree = "<group>"; };
+		CB8DFD260A5F4746A6529F0C /* CMakeLists.txt */ = {isa = PBXFileReference; explicitFileType = sourcecode.text; fileEncoding = 4; lastKnownFileType = text; path = CMakeLists.txt; sourceTree = SOURCE_ROOT; };
+		CD964A8D10AB4A2787BC1EDF /* CMakeLists.txt */ = {isa = PBXFileReference; explicitFileType = sourcecode.text; fileEncoding = 4; lastKnownFileType = text; path = CMakeLists.txt; sourceTree = SOURCE_ROOT; };
+		DD284CCC1151488C85D458EB /* main.cpp */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.cpp; fileEncoding = 4; path = main.cpp; sourceTree = SOURCE_ROOT; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		5DA2E9D6413F413C9926D2F6 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		0E2472CF76994CAFBFED89E7 /* ALL_BUILD */ = {
+			isa = PBXGroup;
+			children = (
+				6FEAF11352E5476587AFB4F1 /* CMake Rules */,
+				CD964A8D10AB4A2787BC1EDF /* CMakeLists.txt */,
+			);
+			name = ALL_BUILD;
+			sourceTree = "<group>";
+		};
+		0EC476FED9814F969122BEF1 /* Header Files */ = {
+			isa = PBXGroup;
+			children = (
+				5157FEFE8D984AFE9EBD7028 /* kobalt.h */,
+			);
+			name = "Header Files";
+			sourceTree = "<group>";
+		};
+		4A11D5C872AC4D318F0A94C9 = {
+			isa = PBXGroup;
+			children = (
+				8CFA0EB42D29F3B1005D592B /* kobalt */,
+				FA18B5820FEC4FA0AC3A6E9E /* kobalt */,
+				0E2472CF76994CAFBFED89E7 /* ALL_BUILD */,
+				97CB3565D5114CF6B18623CD /* Products */,
+				76DDC70435444B2F9F7ECE77 /* Frameworks */,
+				A44F5BAFE130486982A29B5F /* Resources */,
+			);
+			sourceTree = "<group>";
+		};
+		6FEAF11352E5476587AFB4F1 /* CMake Rules */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			name = "CMake Rules";
+			sourceTree = "<group>";
+		};
+		76DDC70435444B2F9F7ECE77 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
+		8CFA0E1A2D29F3B1005D592B /* Debug */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			path = Debug;
+			sourceTree = "<group>";
+		};
+		8CFA0E1B2D29F3B1005D592B /* Debug */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			path = Debug;
+			sourceTree = "<group>";
+		};
+		8CFA0E1C2D29F3B1005D592B /* EagerLinkingTBDs */ = {
+			isa = PBXGroup;
+			children = (
+				8CFA0E1B2D29F3B1005D592B /* Debug */,
+			);
+			path = EagerLinkingTBDs;
+			sourceTree = "<group>";
+		};
+		8CFA0E1E2D29F3B1005D592B /* arm64 */ = {
+			isa = PBXGroup;
+			children = (
+				8CFA0E1D2D29F3B1005D592B /* 82b82416624d2658e5098eb0a28c15c5-common-args.resp */,
+			);
+			path = arm64;
+			sourceTree = "<group>";
+		};
+		8CFA0E1F2D29F3B1005D592B /* Objects-normal */ = {
+			isa = PBXGroup;
+			children = (
+				8CFA0E1E2D29F3B1005D592B /* arm64 */,
+			);
+			path = "Objects-normal";
+			sourceTree = "<group>";
+		};
+		8CFA0E212D29F3B1005D592B /* Debug */ = {
+			isa = PBXGroup;
+			children = (
+				8CFA0E1F2D29F3B1005D592B /* Objects-normal */,
+				8CFA0E202D29F3B1005D592B /* kobalt.DependencyMetadataFileList */,
+			);
+			path = Debug;
+			sourceTree = "<group>";
+		};
+		8CFA0E222D29F3B1005D592B /* kobalt.build */ = {
+			isa = PBXGroup;
+			children = (
+				8CFA0E212D29F3B1005D592B /* Debug */,
+			);
+			path = kobalt.build;
+			sourceTree = "<group>";
+		};
+		8CFA0E272D29F3B1005D592B /* attachments */ = {
+			isa = PBXGroup;
+			children = (
+				8CFA0E232D29F3B1005D592B /* 19f546be2e17e6ef6e0307d320d14347 */,
+				8CFA0E242D29F3B1005D592B /* 63a73eaa34565496662df156e6710acc */,
+				8CFA0E252D29F3B1005D592B /* d41d8cd98f00b204e9800998ecf8427e */,
+				8CFA0E262D29F3B1005D592B /* fa4fe572f34a184de48ac4863c917f8f */,
+			);
+			path = attachments;
+			sourceTree = "<group>";
+		};
+		8CFA0E2D2D29F3B1005D592B /* 3a9439de9801a78bdacbfc6a7b754ef0.xcbuilddata */ = {
+			isa = PBXGroup;
+			children = (
+				8CFA0E272D29F3B1005D592B /* attachments */,
+				8CFA0E282D29F3B1005D592B /* build-request.json */,
+				8CFA0E292D29F3B1005D592B /* description.msgpack */,
+				8CFA0E2A2D29F3B1005D592B /* manifest.json */,
+				8CFA0E2B2D29F3B1005D592B /* target-graph.txt */,
+				8CFA0E2C2D29F3B1005D592B /* task-store.msgpack */,
+			);
+			path = 3a9439de9801a78bdacbfc6a7b754ef0.xcbuilddata;
+			sourceTree = "<group>";
+		};
+		8CFA0E332D29F3B1005D592B /* attachments */ = {
+			isa = PBXGroup;
+			children = (
+				8CFA0E2E2D29F3B1005D592B /* 19f546be2e17e6ef6e0307d320d14347 */,
+				8CFA0E2F2D29F3B1005D592B /* 63a73eaa34565496662df156e6710acc */,
+				8CFA0E302D29F3B1005D592B /* a51551c9d91c1a367693ffa4732dedf6 */,
+				8CFA0E312D29F3B1005D592B /* d41d8cd98f00b204e9800998ecf8427e */,
+				8CFA0E322D29F3B1005D592B /* fa4fe572f34a184de48ac4863c917f8f */,
+			);
+			path = attachments;
+			sourceTree = "<group>";
+		};
+		8CFA0E392D29F3B1005D592B /* db0e4a882a04f71148e0a6b4923c0926.xcbuilddata */ = {
+			isa = PBXGroup;
+			children = (
+				8CFA0E332D29F3B1005D592B /* attachments */,
+				8CFA0E342D29F3B1005D592B /* build-request.json */,
+				8CFA0E352D29F3B1005D592B /* description.msgpack */,
+				8CFA0E362D29F3B1005D592B /* manifest.json */,
+				8CFA0E372D29F3B1005D592B /* target-graph.txt */,
+				8CFA0E382D29F3B1005D592B /* task-store.msgpack */,
+			);
+			path = db0e4a882a04f71148e0a6b4923c0926.xcbuilddata;
+			sourceTree = "<group>";
+		};
+		8CFA0E3B2D29F3B1005D592B /* XCBuildData */ = {
+			isa = PBXGroup;
+			children = (
+				8CFA0E2D2D29F3B1005D592B /* 3a9439de9801a78bdacbfc6a7b754ef0.xcbuilddata */,
+				8CFA0E392D29F3B1005D592B /* db0e4a882a04f71148e0a6b4923c0926.xcbuilddata */,
+				8CFA0E3A2D29F3B1005D592B /* build.db */,
+			);
+			path = XCBuildData;
+			sourceTree = "<group>";
+		};
+		8CFA0E3C2D29F3B1005D592B /* build */ = {
+			isa = PBXGroup;
+			children = (
+				8CFA0E1A2D29F3B1005D592B /* Debug */,
+				8CFA0E1C2D29F3B1005D592B /* EagerLinkingTBDs */,
+				8CFA0E222D29F3B1005D592B /* kobalt.build */,
+				8CFA0E3B2D29F3B1005D592B /* XCBuildData */,
+			);
+			path = build;
+			sourceTree = "<group>";
+		};
+		8CFA0E3E2D29F3B1005D592B /* DerivedSources */ = {
+			isa = PBXGroup;
+			children = (
+				8CFA0E3D2D29F3B1005D592B /* Entitlements.plist */,
+			);
+			path = DerivedSources;
+			sourceTree = "<group>";
+		};
+		8CFA0E452D29F3B1005D592B /* arm64 */ = {
+			isa = PBXGroup;
+			children = (
+				8CFA0E3F2D29F3B1005D592B /* 7187679823f38a2a940e0043cdf9d637-common-args.resp */,
+				8CFA0E402D29F3B1005D592B /* CMakeCCompilerId.d */,
+				8CFA0E412D29F3B1005D592B /* CMakeCCompilerId.dia */,
+				8CFA0E422D29F3B1005D592B /* CMakeCCompilerId.o */,
+				8CFA0E432D29F3B1005D592B /* CompilerIdC.LinkFileList */,
+				8CFA0E442D29F3B1005D592B /* CompilerIdC_dependency_info.dat */,
+			);
+			path = arm64;
+			sourceTree = "<group>";
+		};
+		8CFA0E462D29F3B1005D592B /* Objects-normal */ = {
+			isa = PBXGroup;
+			children = (
+				8CFA0E452D29F3B1005D592B /* arm64 */,
+			);
+			path = "Objects-normal";
+			sourceTree = "<group>";
+		};
+		8CFA0E512D29F3B1005D592B /* CompilerIdC.build */ = {
+			isa = PBXGroup;
+			children = (
+				8CFA0E3E2D29F3B1005D592B /* DerivedSources */,
+				8CFA0E462D29F3B1005D592B /* Objects-normal */,
+				8CFA0E472D29F3B1005D592B /* CompilerIdC.DependencyMetadataFileList */,
+				8CFA0E482D29F3B1005D592B /* CompilerIdC.hmap */,
+				8CFA0E492D29F3B1005D592B /* CompilerIdC.xcent */,
+				8CFA0E4A2D29F3B1005D592B /* CompilerIdC-all-non-framework-target-headers.hmap */,
+				8CFA0E4B2D29F3B1005D592B /* CompilerIdC-all-target-headers.hmap */,
+				8CFA0E4C2D29F3B1005D592B /* CompilerIdC-generated-files.hmap */,
+				8CFA0E4D2D29F3B1005D592B /* CompilerIdC-own-target-headers.hmap */,
+				8CFA0E4E2D29F3B1005D592B /* CompilerIdC-project-headers.hmap */,
+				8CFA0E4F2D29F3B1005D592B /* CompilerIdC.xcent.der */,
+				8CFA0E502D29F3B1005D592B /* Script-2C8FEB8E15DC1A1A00E56A5D.sh */,
+			);
+			path = CompilerIdC.build;
+			sourceTree = "<group>";
+		};
+		8CFA0E532D29F3B1005D592B /* CompilerIdC-d9d24303ac0ea36fa2bc7f98aeea5fe3-VFS */ = {
+			isa = PBXGroup;
+			children = (
+				8CFA0E522D29F3B1005D592B /* all-product-headers.yaml */,
+			);
+			path = "CompilerIdC-d9d24303ac0ea36fa2bc7f98aeea5fe3-VFS";
+			sourceTree = "<group>";
+		};
+		8CFA0E542D29F3B1005D592B /* Debug */ = {
+			isa = PBXGroup;
+			children = (
+				8CFA0E512D29F3B1005D592B /* CompilerIdC.build */,
+				8CFA0E532D29F3B1005D592B /* CompilerIdC-d9d24303ac0ea36fa2bc7f98aeea5fe3-VFS */,
+			);
+			path = Debug;
+			sourceTree = "<group>";
+		};
+		8CFA0E552D29F3B1005D592B /* CompilerIdC.build */ = {
+			isa = PBXGroup;
+			children = (
+				8CFA0E542D29F3B1005D592B /* Debug */,
+			);
+			path = CompilerIdC.build;
+			sourceTree = "<group>";
+		};
+		8CFA0E562D29F3B1005D592B /* Debug */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			path = Debug;
+			sourceTree = "<group>";
+		};
+		8CFA0E572D29F3B1005D592B /* EagerLinkingTBDs */ = {
+			isa = PBXGroup;
+			children = (
+				8CFA0E562D29F3B1005D592B /* Debug */,
+			);
+			path = EagerLinkingTBDs;
+			sourceTree = "<group>";
+		};
+		8CFA0E582D29F3B1005D592B /* tmp */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			path = tmp;
+			sourceTree = "<group>";
+		};
+		8CFA0E602D29F3B1005D592B /* attachments */ = {
+			isa = PBXGroup;
+			children = (
+				8CFA0E592D29F3B1005D592B /* 8bba4233626f64a7ea772bb94a08a1a9 */,
+				8CFA0E5A2D29F3B1005D592B /* 21cf9453263a64d25e28bde810024fd3 */,
+				8CFA0E5B2D29F3B1005D592B /* 177becd055ce63eae4d9f1e7ec0ce515 */,
+				8CFA0E5C2D29F3B1005D592B /* 5317b6f61cb1487d29dd5b9afb05213e */,
+				8CFA0E5D2D29F3B1005D592B /* a51551c9d91c1a367693ffa4732dedf6 */,
+				8CFA0E5E2D29F3B1005D592B /* d41d8cd98f00b204e9800998ecf8427e */,
+				8CFA0E5F2D29F3B1005D592B /* fd8314defc70a8778956f026c0ddfd19 */,
+			);
+			path = attachments;
+			sourceTree = "<group>";
+		};
+		8CFA0E662D29F3B1005D592B /* 3c985a7b1d88f1b03cfc962ce68c6112.xcbuilddata */ = {
+			isa = PBXGroup;
+			children = (
+				8CFA0E602D29F3B1005D592B /* attachments */,
+				8CFA0E612D29F3B1005D592B /* build-request.json */,
+				8CFA0E622D29F3B1005D592B /* description.msgpack */,
+				8CFA0E632D29F3B1005D592B /* manifest.json */,
+				8CFA0E642D29F3B1005D592B /* target-graph.txt */,
+				8CFA0E652D29F3B1005D592B /* task-store.msgpack */,
+			);
+			path = 3c985a7b1d88f1b03cfc962ce68c6112.xcbuilddata;
+			sourceTree = "<group>";
+		};
+		8CFA0E682D29F3B1005D592B /* XCBuildData */ = {
+			isa = PBXGroup;
+			children = (
+				8CFA0E662D29F3B1005D592B /* 3c985a7b1d88f1b03cfc962ce68c6112.xcbuilddata */,
+				8CFA0E672D29F3B1005D592B /* build.db */,
+			);
+			path = XCBuildData;
+			sourceTree = "<group>";
+		};
+		8CFA0E6C2D29F3B1005D592B /* CompilerIdC */ = {
+			isa = PBXGroup;
+			children = (
+				8CFA0E552D29F3B1005D592B /* CompilerIdC.build */,
+				8CFA0E572D29F3B1005D592B /* EagerLinkingTBDs */,
+				8CFA0E582D29F3B1005D592B /* tmp */,
+				8CFA0E682D29F3B1005D592B /* XCBuildData */,
+				8CFA0E692D29F3B1005D592B /* CMakeCCompilerId.c */,
+				8CFA0E6A2D29F3B1005D592B /* CompilerIdC */,
+				8CFA0E6B2D29F3B1005D592B /* CompilerIdC.xcodeproj */,
+			);
+			path = CompilerIdC;
+			sourceTree = "<group>";
+		};
+		8CFA0E6E2D29F3B1005D592B /* DerivedSources */ = {
+			isa = PBXGroup;
+			children = (
+				8CFA0E6D2D29F3B1005D592B /* Entitlements.plist */,
+			);
+			path = DerivedSources;
+			sourceTree = "<group>";
+		};
+		8CFA0E752D29F3B1005D592B /* arm64 */ = {
+			isa = PBXGroup;
+			children = (
+				8CFA0E6F2D29F3B1005D592B /* 82b82416624d2658e5098eb0a28c15c5-common-args.resp */,
+				8CFA0E702D29F3B1005D592B /* CMakeCXXCompilerId.d */,
+				8CFA0E712D29F3B1005D592B /* CMakeCXXCompilerId.dia */,
+				8CFA0E722D29F3B1005D592B /* CMakeCXXCompilerId.o */,
+				8CFA0E732D29F3B1005D592B /* CompilerIdCXX.LinkFileList */,
+				8CFA0E742D29F3B1005D592B /* CompilerIdCXX_dependency_info.dat */,
+			);
+			path = arm64;
+			sourceTree = "<group>";
+		};
+		8CFA0E762D29F3B1005D592B /* Objects-normal */ = {
+			isa = PBXGroup;
+			children = (
+				8CFA0E752D29F3B1005D592B /* arm64 */,
+			);
+			path = "Objects-normal";
+			sourceTree = "<group>";
+		};
+		8CFA0E812D29F3B1005D592B /* CompilerIdCXX.build */ = {
+			isa = PBXGroup;
+			children = (
+				8CFA0E6E2D29F3B1005D592B /* DerivedSources */,
+				8CFA0E762D29F3B1005D592B /* Objects-normal */,
+				8CFA0E772D29F3B1005D592B /* CompilerIdCXX.DependencyMetadataFileList */,
+				8CFA0E782D29F3B1005D592B /* CompilerIdCXX.hmap */,
+				8CFA0E792D29F3B1005D592B /* CompilerIdCXX.xcent */,
+				8CFA0E7A2D29F3B1005D592B /* CompilerIdCXX-all-non-framework-target-headers.hmap */,
+				8CFA0E7B2D29F3B1005D592B /* CompilerIdCXX-all-target-headers.hmap */,
+				8CFA0E7C2D29F3B1005D592B /* CompilerIdCXX-generated-files.hmap */,
+				8CFA0E7D2D29F3B1005D592B /* CompilerIdCXX-own-target-headers.hmap */,
+				8CFA0E7E2D29F3B1005D592B /* CompilerIdCXX-project-headers.hmap */,
+				8CFA0E7F2D29F3B1005D592B /* CompilerIdCXX.xcent.der */,
+				8CFA0E802D29F3B1005D592B /* Script-2C8FEB8E15DC1A1A00E56A5D.sh */,
+			);
+			path = CompilerIdCXX.build;
+			sourceTree = "<group>";
+		};
+		8CFA0E832D29F3B1005D592B /* CompilerIdCXX-cab83bf49ed2df1b1ab81a78cb182d1a-VFS */ = {
+			isa = PBXGroup;
+			children = (
+				8CFA0E822D29F3B1005D592B /* all-product-headers.yaml */,
+			);
+			path = "CompilerIdCXX-cab83bf49ed2df1b1ab81a78cb182d1a-VFS";
+			sourceTree = "<group>";
+		};
+		8CFA0E842D29F3B1005D592B /* Debug */ = {
+			isa = PBXGroup;
+			children = (
+				8CFA0E812D29F3B1005D592B /* CompilerIdCXX.build */,
+				8CFA0E832D29F3B1005D592B /* CompilerIdCXX-cab83bf49ed2df1b1ab81a78cb182d1a-VFS */,
+			);
+			path = Debug;
+			sourceTree = "<group>";
+		};
+		8CFA0E852D29F3B1005D592B /* CompilerIdCXX.build */ = {
+			isa = PBXGroup;
+			children = (
+				8CFA0E842D29F3B1005D592B /* Debug */,
+			);
+			path = CompilerIdCXX.build;
+			sourceTree = "<group>";
+		};
+		8CFA0E862D29F3B1005D592B /* Debug */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			path = Debug;
+			sourceTree = "<group>";
+		};
+		8CFA0E872D29F3B1005D592B /* EagerLinkingTBDs */ = {
+			isa = PBXGroup;
+			children = (
+				8CFA0E862D29F3B1005D592B /* Debug */,
+			);
+			path = EagerLinkingTBDs;
+			sourceTree = "<group>";
+		};
+		8CFA0E882D29F3B1005D592B /* tmp */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			path = tmp;
+			sourceTree = "<group>";
+		};
+		8CFA0E902D29F3B1005D592B /* attachments */ = {
+			isa = PBXGroup;
+			children = (
+				8CFA0E892D29F3B1005D592B /* 1ae5a6bf47430b631e96b9616c8f3764 */,
+				8CFA0E8A2D29F3B1005D592B /* 8bba4233626f64a7ea772bb94a08a1a9 */,
+				8CFA0E8B2D29F3B1005D592B /* 8e318c4b9ba57dd4fc8fe18995b41250 */,
+				8CFA0E8C2D29F3B1005D592B /* 177becd055ce63eae4d9f1e7ec0ce515 */,
+				8CFA0E8D2D29F3B1005D592B /* a51551c9d91c1a367693ffa4732dedf6 */,
+				8CFA0E8E2D29F3B1005D592B /* d41d8cd98f00b204e9800998ecf8427e */,
+				8CFA0E8F2D29F3B1005D592B /* fd8314defc70a8778956f026c0ddfd19 */,
+			);
+			path = attachments;
+			sourceTree = "<group>";
+		};
+		8CFA0E962D29F3B1005D592B /* 247b09522f1d74d8ddc8fca59c9002df.xcbuilddata */ = {
+			isa = PBXGroup;
+			children = (
+				8CFA0E902D29F3B1005D592B /* attachments */,
+				8CFA0E912D29F3B1005D592B /* build-request.json */,
+				8CFA0E922D29F3B1005D592B /* description.msgpack */,
+				8CFA0E932D29F3B1005D592B /* manifest.json */,
+				8CFA0E942D29F3B1005D592B /* target-graph.txt */,
+				8CFA0E952D29F3B1005D592B /* task-store.msgpack */,
+			);
+			path = 247b09522f1d74d8ddc8fca59c9002df.xcbuilddata;
+			sourceTree = "<group>";
+		};
+		8CFA0E982D29F3B1005D592B /* XCBuildData */ = {
+			isa = PBXGroup;
+			children = (
+				8CFA0E962D29F3B1005D592B /* 247b09522f1d74d8ddc8fca59c9002df.xcbuilddata */,
+				8CFA0E972D29F3B1005D592B /* build.db */,
+			);
+			path = XCBuildData;
+			sourceTree = "<group>";
+		};
+		8CFA0E9C2D29F3B1005D592B /* CompilerIdCXX */ = {
+			isa = PBXGroup;
+			children = (
+				8CFA0E852D29F3B1005D592B /* CompilerIdCXX.build */,
+				8CFA0E872D29F3B1005D592B /* EagerLinkingTBDs */,
+				8CFA0E882D29F3B1005D592B /* tmp */,
+				8CFA0E982D29F3B1005D592B /* XCBuildData */,
+				8CFA0E992D29F3B1005D592B /* CMakeCXXCompilerId.cpp */,
+				8CFA0E9A2D29F3B1005D592B /* CompilerIdCXX */,
+				8CFA0E9B2D29F3B1005D592B /* CompilerIdCXX.xcodeproj */,
+			);
+			path = CompilerIdCXX;
+			sourceTree = "<group>";
+		};
+		8CFA0EA22D29F3B1005D592B /* 3.30.2 */ = {
+			isa = PBXGroup;
+			children = (
+				8CFA0E6C2D29F3B1005D592B /* CompilerIdC */,
+				8CFA0E9C2D29F3B1005D592B /* CompilerIdCXX */,
+				8CFA0E9D2D29F3B1005D592B /* CMakeCCompiler.cmake */,
+				8CFA0E9E2D29F3B1005D592B /* CMakeCXXCompiler.cmake */,
+				8CFA0E9F2D29F3B1005D592B /* CMakeDetermineCompilerABI_C.bin */,
+				8CFA0EA02D29F3B1005D592B /* CMakeDetermineCompilerABI_CXX.bin */,
+				8CFA0EA12D29F3B1005D592B /* CMakeSystem.cmake */,
+			);
+			path = 3.30.2;
+			sourceTree = "<group>";
+		};
+		8CFA0EA32D29F3B1005D592B /* CMakeScratch */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			path = CMakeScratch;
+			sourceTree = "<group>";
+		};
+		8CFA0EA42D29F3B1005D592B /* pkgRedirects */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			path = pkgRedirects;
+			sourceTree = "<group>";
+		};
+		8CFA0EA82D29F3B1005D592B /* CMakeFiles */ = {
+			isa = PBXGroup;
+			children = (
+				8CFA0EA22D29F3B1005D592B /* 3.30.2 */,
+				8CFA0EA32D29F3B1005D592B /* CMakeScratch */,
+				8CFA0EA42D29F3B1005D592B /* pkgRedirects */,
+				8CFA0EA52D29F3B1005D592B /* cmake.check_cache */,
+				8CFA0EA62D29F3B1005D592B /* CMakeConfigureLog.yaml */,
+				8CFA0EA72D29F3B1005D592B /* TargetDirectories.txt */,
+			);
+			path = CMakeFiles;
+			sourceTree = "<group>";
+		};
+		8CFA0EAA2D29F3B1005D592B /* CMakeScripts */ = {
+			isa = PBXGroup;
+			children = (
+				8CFA0EA92D29F3B1005D592B /* ReRunCMake.make */,
+			);
+			path = CMakeScripts;
+			sourceTree = "<group>";
+		};
+		8CFA0EAB2D29F3B1005D592B /* Debug */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			path = Debug;
+			sourceTree = "<group>";
+		};
+		8CFA0EAF2D29F3B1005D592B /* build */ = {
+			isa = PBXGroup;
+			children = (
+				8CFA0E3C2D29F3B1005D592B /* build */,
+				8CFA0EA82D29F3B1005D592B /* CMakeFiles */,
+				8CFA0EAA2D29F3B1005D592B /* CMakeScripts */,
+				8CFA0EAB2D29F3B1005D592B /* Debug */,
+				8CFA0EAC2D29F3B1005D592B /* cmake_install.cmake */,
+				8CFA0EAD2D29F3B1005D592B /* CMakeCache.txt */,
+				8CFA0EAE2D29F3B1005D592B /* kobalt.xcodeproj */,
+			);
+			path = build;
+			sourceTree = "<group>";
+		};
+		8CFA0EB42D29F3B1005D592B /* kobalt */ = {
+			isa = PBXGroup;
+			children = (
+				8CFA0EAF2D29F3B1005D592B /* build */,
+				8CFA0EB02D29F3B1005D592B /* CMakeLists.txt */,
+				8CFA0EB12D29F3B1005D592B /* concept.txt */,
+				8CFA0EB22D29F3B1005D592B /* kobalt.h */,
+				8CFA0EB32D29F3B1005D592B /* main.cpp */,
+			);
+			name = kobalt;
+			path = /Users/krisvers/Dev/kobalt;
+			sourceTree = "<absolute>";
+		};
+		8CFA0EB52D29F3B1005D592B /* Products */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		8CFA0EB72D29F3B1005D592B /* Products */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		8CFA0EB92D29F3B1005D592B /* Products */ = {
+			isa = PBXGroup;
+			name = Products;
+			sourceTree = "<group>";
+		};
+		97CB3565D5114CF6B18623CD /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				260311EE25664AC58E1899C4 /* kobalt */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		A44F5BAFE130486982A29B5F /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			name = Resources;
+			sourceTree = "<group>";
+		};
+		FA18B5820FEC4FA0AC3A6E9E /* kobalt */ = {
+			isa = PBXGroup;
+			children = (
+				FB9FC9C1269D40DBAE72FF78 /* Source Files */,
+				0EC476FED9814F969122BEF1 /* Header Files */,
+				CB8DFD260A5F4746A6529F0C /* CMakeLists.txt */,
+			);
+			name = kobalt;
+			sourceTree = "<group>";
+		};
+		FB9FC9C1269D40DBAE72FF78 /* Source Files */ = {
+			isa = PBXGroup;
+			children = (
+				DD284CCC1151488C85D458EB /* main.cpp */,
+			);
+			name = "Source Files";
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		8A9EB9E43E63C7B9289980CF /* kobalt */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = FA49FB2CEAE24A67A94DE888 /* Build configuration list for PBXNativeTarget "kobalt" */;
+			buildPhases = (
+				22B4EBB4983C414097226012 /* Sources */,
+				5DA2E9D6413F413C9926D2F6 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				4334A1C49C3F417D90732B7A /* PBXTargetDependency */,
+			);
+			name = kobalt;
+			productName = kobalt;
+			productReference = 260311EE25664AC58E1899C4 /* kobalt */;
+			productType = "com.apple.product-type.tool";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		7529AD2200E148F7BBB8FE92 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				LastUpgradeCheck = 1620;
+			};
+			buildConfigurationList = FA2E10F538A04A808A5225C8 /* Build configuration list for PBXProject "kobalt" */;
+			compatibilityVersion = "Xcode 3.2";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = 4A11D5C872AC4D318F0A94C9;
+			projectDirPath = /Users/krisvers/dev/kobalt;
+			projectReferences = (
+				{
+					ProductGroup = 8CFA0EB52D29F3B1005D592B /* Products */;
+					ProjectRef = 8CFA0E6B2D29F3B1005D592B /* CompilerIdC.xcodeproj */;
+				},
+				{
+					ProductGroup = 8CFA0EB72D29F3B1005D592B /* Products */;
+					ProjectRef = 8CFA0E9B2D29F3B1005D592B /* CompilerIdCXX.xcodeproj */;
+				},
+				{
+					ProductGroup = 8CFA0EB92D29F3B1005D592B /* Products */;
+					ProjectRef = 8CFA0EAE2D29F3B1005D592B /* kobalt.xcodeproj */;
+				},
+			);
+			projectRoot = "";
+			targets = (
+				415094795476C776D3D52BC2 /* ALL_BUILD */,
+				FF9902E9E4A1F6334F7F01B7 /* ZERO_CHECK */,
+				8A9EB9E43E63C7B9289980CF /* kobalt */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXShellScriptBuildPhase section */
+		CBA1D3A81BDE872D06952E42 /* Generate CMakeFiles/ALL_BUILD */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputPaths = (
+			);
+			name = "Generate CMakeFiles/ALL_BUILD";
+			outputPaths = (
+				/Users/krisvers/dev/kobalt/build/CMakeFiles/ALL_BUILD,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "set -e\nif test \"$CONFIGURATION\" = \"Debug\"; then :\n  cd /Users/krisvers/dev/kobalt/build\n  echo Build\\ all\\ projects\nfi\nif test \"$CONFIGURATION\" = \"Release\"; then :\n  cd /Users/krisvers/dev/kobalt/build\n  echo Build\\ all\\ projects\nfi\nif test \"$CONFIGURATION\" = \"MinSizeRel\"; then :\n  cd /Users/krisvers/dev/kobalt/build\n  echo Build\\ all\\ projects\nfi\nif test \"$CONFIGURATION\" = \"RelWithDebInfo\"; then :\n  cd /Users/krisvers/dev/kobalt/build\n  echo Build\\ all\\ projects\nfi\n";
+			showEnvVarsInLog = 0;
+		};
+		E971E99D7A4970CD5C519487 /* Generate CMakeFiles/ZERO_CHECK */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputPaths = (
+			);
+			name = "Generate CMakeFiles/ZERO_CHECK";
+			outputPaths = (
+				/Users/krisvers/dev/kobalt/build/CMakeFiles/ZERO_CHECK,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "set -e\nif test \"$CONFIGURATION\" = \"Debug\"; then :\n  cd /Users/krisvers/dev/kobalt/build\n  make -f /Users/krisvers/dev/kobalt/build/CMakeScripts/ReRunCMake.make\nfi\nif test \"$CONFIGURATION\" = \"Release\"; then :\n  cd /Users/krisvers/dev/kobalt/build\n  make -f /Users/krisvers/dev/kobalt/build/CMakeScripts/ReRunCMake.make\nfi\nif test \"$CONFIGURATION\" = \"MinSizeRel\"; then :\n  cd /Users/krisvers/dev/kobalt/build\n  make -f /Users/krisvers/dev/kobalt/build/CMakeScripts/ReRunCMake.make\nfi\nif test \"$CONFIGURATION\" = \"RelWithDebInfo\"; then :\n  cd /Users/krisvers/dev/kobalt/build\n  make -f /Users/krisvers/dev/kobalt/build/CMakeScripts/ReRunCMake.make\nfi\n";
+			showEnvVarsInLog = 0;
+		};
+/* End PBXShellScriptBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		22B4EBB4983C414097226012 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				6A11A7E833144EE581D15A90 /* main.cpp in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		4334A1C49C3F417D90732B7A /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = FF9902E9E4A1F6334F7F01B7 /* ZERO_CHECK */;
+			targetProxy = 677D727FA37E4DF5A3DEA9DC /* PBXContainerItemProxy */;
+		};
+		8FFED41449604CFF87B3ACAC /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 8A9EB9E43E63C7B9289980CF /* kobalt */;
+			targetProxy = DD88E64299274547ACF9F79F /* PBXContainerItemProxy */;
+		};
+		93B2C0CBEF4F415D9A568DD8 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = FF9902E9E4A1F6334F7F01B7 /* ZERO_CHECK */;
+			targetProxy = 8444F1A9A2A84FAEAD533C08 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		0DE7026037A24CF491264B47 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ARCHS = arm64;
+				MACOSX_DEPLOYMENT_TARGET = 15.1;
+				SDKROOT = /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX15.2.sdk;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SYMROOT = /Users/krisvers/dev/kobalt/build/build;
+			};
+			name = Release;
+		};
+		0EC71C6EF0404FA8B2495349 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ARCHS = arm64;
+				COMBINE_HIDPI_IMAGES = YES;
+				CONFIGURATION_BUILD_DIR = /Users/krisvers/dev/kobalt/build/Release;
+				EXECUTABLE_PREFIX = "";
+				EXECUTABLE_SUFFIX = "";
+				GCC_GENERATE_DEBUGGING_SYMBOLS = NO;
+				GCC_INLINES_ARE_PRIVATE_EXTERN = NO;
+				GCC_OPTIMIZATION_LEVEL = 3;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"'CMAKE_INTDIR=\"$(CONFIGURATION)$(EFFECTIVE_PLATFORM_NAME)\"'",
+					"$(inherited)",
+				);
+				GCC_SYMBOLS_PRIVATE_EXTERN = NO;
+				INSTALL_PATH = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					/opt/homebrew/lib/libvulkan.dylib,
+					/opt/homebrew/lib,
+					"$(inherited)",
+				);
+				LIBRARY_SEARCH_PATHS = (
+					"/opt/homebrew/lib/libvulkan.dylib/$(CONFIGURATION)$(EFFECTIVE_PLATFORM_NAME)",
+					/opt/homebrew/lib/libvulkan.dylib,
+					"$(inherited)",
+				);
+				ONLY_ACTIVE_ARCH = NO;
+				OTHER_CPLUSPLUSFLAGS = (
+					"-DNDEBUG",
+					"'-std=gnu++11'",
+				);
+				OTHER_LDFLAGS = (
+					"-Wl,-search_paths_first",
+					"-Wl,-headerpad_max_install_names",
+					/opt/homebrew/lib/libvulkan.dylib,
+					/opt/homebrew/lib/libglfw.3.4.dylib,
+					"$(inherited)",
+				);
+				OTHER_REZFLAGS = "";
+				PRODUCT_NAME = kobalt;
+				SECTORDER_FLAGS = "";
+				SYSTEM_HEADER_SEARCH_PATHS = (
+					/opt/homebrew/include,
+					"$(inherited)",
+				);
+				TARGET_TEMP_DIR = "/Users/krisvers/dev/kobalt/build/build/kobalt.build/$(CONFIGURATION)$(EFFECTIVE_PLATFORM_NAME)";
+				USE_HEADERMAP = NO;
+				WARNING_CFLAGS = "$(inherited)";
+			};
+			name = Release;
+		};
+		2AB63C96F09B48F285BC94E0 /* RelWithDebInfo */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ARCHS = arm64;
+				MACOSX_DEPLOYMENT_TARGET = 15.1;
+				SDKROOT = /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX15.2.sdk;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SYMROOT = /Users/krisvers/dev/kobalt/build/build;
+			};
+			name = RelWithDebInfo;
+		};
+		350AF7F4809843EBBA12E3AE /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ARCHS = arm64;
+				COMBINE_HIDPI_IMAGES = YES;
+				GCC_GENERATE_DEBUGGING_SYMBOLS = YES;
+				GCC_INLINES_ARE_PRIVATE_EXTERN = NO;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"'CMAKE_INTDIR=\"$(CONFIGURATION)$(EFFECTIVE_PLATFORM_NAME)\"'",
+					"$(inherited)",
+				);
+				GCC_SYMBOLS_PRIVATE_EXTERN = NO;
+				INSTALL_PATH = "";
+				ONLY_ACTIVE_ARCH = NO;
+				OTHER_LDFLAGS = " $(inherited)";
+				OTHER_REZFLAGS = "";
+				PRODUCT_NAME = ALL_BUILD;
+				SECTORDER_FLAGS = "";
+				USE_HEADERMAP = NO;
+				WARNING_CFLAGS = "$(inherited)";
+			};
+			name = Debug;
+		};
+		57C1C1FB87154E0B995AE42F /* MinSizeRel */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ARCHS = arm64;
+				COMBINE_HIDPI_IMAGES = YES;
+				GCC_GENERATE_DEBUGGING_SYMBOLS = YES;
+				GCC_INLINES_ARE_PRIVATE_EXTERN = NO;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"'CMAKE_INTDIR=\"$(CONFIGURATION)$(EFFECTIVE_PLATFORM_NAME)\"'",
+					"$(inherited)",
+				);
+				GCC_SYMBOLS_PRIVATE_EXTERN = NO;
+				INSTALL_PATH = "";
+				ONLY_ACTIVE_ARCH = NO;
+				OTHER_LDFLAGS = " $(inherited)";
+				OTHER_REZFLAGS = "";
+				PRODUCT_NAME = ZERO_CHECK;
+				SECTORDER_FLAGS = "";
+				USE_HEADERMAP = NO;
+				WARNING_CFLAGS = "$(inherited)";
+			};
+			name = MinSizeRel;
+		};
+		5D089C9459184D7F830AB145 /* RelWithDebInfo */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ARCHS = arm64;
+				COMBINE_HIDPI_IMAGES = YES;
+				GCC_GENERATE_DEBUGGING_SYMBOLS = YES;
+				GCC_INLINES_ARE_PRIVATE_EXTERN = NO;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"'CMAKE_INTDIR=\"$(CONFIGURATION)$(EFFECTIVE_PLATFORM_NAME)\"'",
+					"$(inherited)",
+				);
+				GCC_SYMBOLS_PRIVATE_EXTERN = NO;
+				INSTALL_PATH = "";
+				ONLY_ACTIVE_ARCH = NO;
+				OTHER_LDFLAGS = " $(inherited)";
+				OTHER_REZFLAGS = "";
+				PRODUCT_NAME = ALL_BUILD;
+				SECTORDER_FLAGS = "";
+				USE_HEADERMAP = NO;
+				WARNING_CFLAGS = "$(inherited)";
+			};
+			name = RelWithDebInfo;
+		};
+		701A0A4E612A40699E8A730C /* RelWithDebInfo */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ARCHS = arm64;
+				COMBINE_HIDPI_IMAGES = YES;
+				GCC_GENERATE_DEBUGGING_SYMBOLS = YES;
+				GCC_INLINES_ARE_PRIVATE_EXTERN = NO;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"'CMAKE_INTDIR=\"$(CONFIGURATION)$(EFFECTIVE_PLATFORM_NAME)\"'",
+					"$(inherited)",
+				);
+				GCC_SYMBOLS_PRIVATE_EXTERN = NO;
+				INSTALL_PATH = "";
+				ONLY_ACTIVE_ARCH = NO;
+				OTHER_LDFLAGS = " $(inherited)";
+				OTHER_REZFLAGS = "";
+				PRODUCT_NAME = ZERO_CHECK;
+				SECTORDER_FLAGS = "";
+				USE_HEADERMAP = NO;
+				WARNING_CFLAGS = "$(inherited)";
+			};
+			name = RelWithDebInfo;
+		};
+		70EE3D3BB2864038A99C4249 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ARCHS = arm64;
+				COMBINE_HIDPI_IMAGES = YES;
+				GCC_GENERATE_DEBUGGING_SYMBOLS = YES;
+				GCC_INLINES_ARE_PRIVATE_EXTERN = NO;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"'CMAKE_INTDIR=\"$(CONFIGURATION)$(EFFECTIVE_PLATFORM_NAME)\"'",
+					"$(inherited)",
+				);
+				GCC_SYMBOLS_PRIVATE_EXTERN = NO;
+				INSTALL_PATH = "";
+				ONLY_ACTIVE_ARCH = NO;
+				OTHER_LDFLAGS = " $(inherited)";
+				OTHER_REZFLAGS = "";
+				PRODUCT_NAME = ALL_BUILD;
+				SECTORDER_FLAGS = "";
+				USE_HEADERMAP = NO;
+				WARNING_CFLAGS = "$(inherited)";
+			};
+			name = Release;
+		};
+		84400BF061BB4E9BA82E7FDF /* MinSizeRel */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ARCHS = arm64;
+				COMBINE_HIDPI_IMAGES = YES;
+				CONFIGURATION_BUILD_DIR = /Users/krisvers/dev/kobalt/build/MinSizeRel;
+				EXECUTABLE_PREFIX = "";
+				EXECUTABLE_SUFFIX = "";
+				GCC_GENERATE_DEBUGGING_SYMBOLS = NO;
+				GCC_INLINES_ARE_PRIVATE_EXTERN = NO;
+				GCC_OPTIMIZATION_LEVEL = s;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"'CMAKE_INTDIR=\"$(CONFIGURATION)$(EFFECTIVE_PLATFORM_NAME)\"'",
+					"$(inherited)",
+				);
+				GCC_SYMBOLS_PRIVATE_EXTERN = NO;
+				INSTALL_PATH = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					/opt/homebrew/lib/libvulkan.dylib,
+					/opt/homebrew/lib,
+					"$(inherited)",
+				);
+				LIBRARY_SEARCH_PATHS = (
+					"/opt/homebrew/lib/libvulkan.dylib/$(CONFIGURATION)$(EFFECTIVE_PLATFORM_NAME)",
+					/opt/homebrew/lib/libvulkan.dylib,
+					"$(inherited)",
+				);
+				ONLY_ACTIVE_ARCH = NO;
+				OTHER_CPLUSPLUSFLAGS = (
+					"-DNDEBUG",
+					"'-std=gnu++11'",
+				);
+				OTHER_LDFLAGS = (
+					"-Wl,-search_paths_first",
+					"-Wl,-headerpad_max_install_names",
+					/opt/homebrew/lib/libvulkan.dylib,
+					/opt/homebrew/lib/libglfw.3.4.dylib,
+					"$(inherited)",
+				);
+				OTHER_REZFLAGS = "";
+				PRODUCT_NAME = kobalt;
+				SECTORDER_FLAGS = "";
+				SYSTEM_HEADER_SEARCH_PATHS = (
+					/opt/homebrew/include,
+					"$(inherited)",
+				);
+				TARGET_TEMP_DIR = "/Users/krisvers/dev/kobalt/build/build/kobalt.build/$(CONFIGURATION)$(EFFECTIVE_PLATFORM_NAME)";
+				USE_HEADERMAP = NO;
+				WARNING_CFLAGS = "$(inherited)";
+			};
+			name = MinSizeRel;
+		};
+		9199F25D31B14689AC5E4813 /* RelWithDebInfo */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ARCHS = arm64;
+				COMBINE_HIDPI_IMAGES = YES;
+				CONFIGURATION_BUILD_DIR = /Users/krisvers/dev/kobalt/build/RelWithDebInfo;
+				EXECUTABLE_PREFIX = "";
+				EXECUTABLE_SUFFIX = "";
+				GCC_GENERATE_DEBUGGING_SYMBOLS = YES;
+				GCC_INLINES_ARE_PRIVATE_EXTERN = NO;
+				GCC_OPTIMIZATION_LEVEL = 2;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"'CMAKE_INTDIR=\"$(CONFIGURATION)$(EFFECTIVE_PLATFORM_NAME)\"'",
+					"$(inherited)",
+				);
+				GCC_SYMBOLS_PRIVATE_EXTERN = NO;
+				INSTALL_PATH = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					/opt/homebrew/lib/libvulkan.dylib,
+					/opt/homebrew/lib,
+					"$(inherited)",
+				);
+				LIBRARY_SEARCH_PATHS = (
+					"/opt/homebrew/lib/libvulkan.dylib/$(CONFIGURATION)$(EFFECTIVE_PLATFORM_NAME)",
+					/opt/homebrew/lib/libvulkan.dylib,
+					"$(inherited)",
+				);
+				ONLY_ACTIVE_ARCH = NO;
+				OTHER_CPLUSPLUSFLAGS = (
+					"-DNDEBUG",
+					"'-std=gnu++11'",
+				);
+				OTHER_LDFLAGS = (
+					"-Wl,-search_paths_first",
+					"-Wl,-headerpad_max_install_names",
+					/opt/homebrew/lib/libvulkan.dylib,
+					/opt/homebrew/lib/libglfw.3.4.dylib,
+					"$(inherited)",
+				);
+				OTHER_REZFLAGS = "";
+				PRODUCT_NAME = kobalt;
+				SECTORDER_FLAGS = "";
+				SYSTEM_HEADER_SEARCH_PATHS = (
+					/opt/homebrew/include,
+					"$(inherited)",
+				);
+				TARGET_TEMP_DIR = "/Users/krisvers/dev/kobalt/build/build/kobalt.build/$(CONFIGURATION)$(EFFECTIVE_PLATFORM_NAME)";
+				USE_HEADERMAP = NO;
+				WARNING_CFLAGS = "$(inherited)";
+			};
+			name = RelWithDebInfo;
+		};
+		9A13FC399A7846C4B82F9ABA /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ARCHS = arm64;
+				COMBINE_HIDPI_IMAGES = YES;
+				GCC_GENERATE_DEBUGGING_SYMBOLS = YES;
+				GCC_INLINES_ARE_PRIVATE_EXTERN = NO;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"'CMAKE_INTDIR=\"$(CONFIGURATION)$(EFFECTIVE_PLATFORM_NAME)\"'",
+					"$(inherited)",
+				);
+				GCC_SYMBOLS_PRIVATE_EXTERN = NO;
+				INSTALL_PATH = "";
+				ONLY_ACTIVE_ARCH = NO;
+				OTHER_LDFLAGS = " $(inherited)";
+				OTHER_REZFLAGS = "";
+				PRODUCT_NAME = ZERO_CHECK;
+				SECTORDER_FLAGS = "";
+				USE_HEADERMAP = NO;
+				WARNING_CFLAGS = "$(inherited)";
+			};
+			name = Debug;
+		};
+		B9526B35A94546C583D7021B /* MinSizeRel */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ARCHS = arm64;
+				MACOSX_DEPLOYMENT_TARGET = 15.1;
+				SDKROOT = /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX15.2.sdk;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SYMROOT = /Users/krisvers/dev/kobalt/build/build;
+			};
+			name = MinSizeRel;
+		};
+		BA28672D11134EACBC591A1A /* MinSizeRel */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ARCHS = arm64;
+				COMBINE_HIDPI_IMAGES = YES;
+				GCC_GENERATE_DEBUGGING_SYMBOLS = YES;
+				GCC_INLINES_ARE_PRIVATE_EXTERN = NO;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"'CMAKE_INTDIR=\"$(CONFIGURATION)$(EFFECTIVE_PLATFORM_NAME)\"'",
+					"$(inherited)",
+				);
+				GCC_SYMBOLS_PRIVATE_EXTERN = NO;
+				INSTALL_PATH = "";
+				ONLY_ACTIVE_ARCH = NO;
+				OTHER_LDFLAGS = " $(inherited)";
+				OTHER_REZFLAGS = "";
+				PRODUCT_NAME = ALL_BUILD;
+				SECTORDER_FLAGS = "";
+				USE_HEADERMAP = NO;
+				WARNING_CFLAGS = "$(inherited)";
+			};
+			name = MinSizeRel;
+		};
+		C662B4347CE44233B6F4678E /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ARCHS = arm64;
+				COMBINE_HIDPI_IMAGES = YES;
+				GCC_GENERATE_DEBUGGING_SYMBOLS = YES;
+				GCC_INLINES_ARE_PRIVATE_EXTERN = NO;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"'CMAKE_INTDIR=\"$(CONFIGURATION)$(EFFECTIVE_PLATFORM_NAME)\"'",
+					"$(inherited)",
+				);
+				GCC_SYMBOLS_PRIVATE_EXTERN = NO;
+				INSTALL_PATH = "";
+				ONLY_ACTIVE_ARCH = NO;
+				OTHER_LDFLAGS = " $(inherited)";
+				OTHER_REZFLAGS = "";
+				PRODUCT_NAME = ZERO_CHECK;
+				SECTORDER_FLAGS = "";
+				USE_HEADERMAP = NO;
+				WARNING_CFLAGS = "$(inherited)";
+			};
+			name = Release;
+		};
+		C9EF05EEA08348DE9227C456 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ARCHS = arm64;
+				COMBINE_HIDPI_IMAGES = YES;
+				CONFIGURATION_BUILD_DIR = /Users/krisvers/dev/kobalt/build/Debug;
+				EXECUTABLE_PREFIX = "";
+				EXECUTABLE_SUFFIX = "";
+				GCC_GENERATE_DEBUGGING_SYMBOLS = YES;
+				GCC_INLINES_ARE_PRIVATE_EXTERN = NO;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"'CMAKE_INTDIR=\"$(CONFIGURATION)$(EFFECTIVE_PLATFORM_NAME)\"'",
+					"$(inherited)",
+				);
+				GCC_SYMBOLS_PRIVATE_EXTERN = NO;
+				INSTALL_PATH = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					/opt/homebrew/lib/libvulkan.dylib,
+					/opt/homebrew/lib,
+					"$(inherited)",
+				);
+				LIBRARY_SEARCH_PATHS = (
+					"/opt/homebrew/lib/libvulkan.dylib/$(CONFIGURATION)$(EFFECTIVE_PLATFORM_NAME)",
+					/opt/homebrew/lib/libvulkan.dylib,
+					"$(inherited)",
+				);
+				ONLY_ACTIVE_ARCH = NO;
+				OTHER_CPLUSPLUSFLAGS = "   '-std=gnu++11' ";
+				OTHER_LDFLAGS = (
+					"-Wl,-search_paths_first",
+					"-Wl,-headerpad_max_install_names",
+					/opt/homebrew/lib/libvulkan.dylib,
+					/opt/homebrew/lib/libglfw.3.4.dylib,
+					"$(inherited)",
+				);
+				OTHER_REZFLAGS = "";
+				PRODUCT_NAME = kobalt;
+				SECTORDER_FLAGS = "";
+				SYSTEM_HEADER_SEARCH_PATHS = (
+					/opt/homebrew/include,
+					"$(inherited)",
+				);
+				TARGET_TEMP_DIR = "/Users/krisvers/dev/kobalt/build/build/kobalt.build/$(CONFIGURATION)$(EFFECTIVE_PLATFORM_NAME)";
+				USE_HEADERMAP = NO;
+				WARNING_CFLAGS = "$(inherited)";
+			};
+			name = Debug;
+		};
+		FC2169D237644F9A92F106F3 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ARCHS = arm64;
+				MACOSX_DEPLOYMENT_TARGET = 15.1;
+				SDKROOT = /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX15.2.sdk;
+				SYMROOT = /Users/krisvers/dev/kobalt/build/build;
+			};
+			name = Debug;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		169E3CDCD076483DBF1B879A /* Build configuration list for PBXAggregateTarget "ALL_BUILD" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				350AF7F4809843EBBA12E3AE /* Debug */,
+				70EE3D3BB2864038A99C4249 /* Release */,
+				BA28672D11134EACBC591A1A /* MinSizeRel */,
+				5D089C9459184D7F830AB145 /* RelWithDebInfo */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		4ECD972BF48342F8A7E50DA4 /* Build configuration list for PBXAggregateTarget "ZERO_CHECK" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				9A13FC399A7846C4B82F9ABA /* Debug */,
+				C662B4347CE44233B6F4678E /* Release */,
+				57C1C1FB87154E0B995AE42F /* MinSizeRel */,
+				701A0A4E612A40699E8A730C /* RelWithDebInfo */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		FA2E10F538A04A808A5225C8 /* Build configuration list for PBXProject "kobalt" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				FC2169D237644F9A92F106F3 /* Debug */,
+				0DE7026037A24CF491264B47 /* Release */,
+				B9526B35A94546C583D7021B /* MinSizeRel */,
+				2AB63C96F09B48F285BC94E0 /* RelWithDebInfo */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		FA49FB2CEAE24A67A94DE888 /* Build configuration list for PBXNativeTarget "kobalt" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				C9EF05EEA08348DE9227C456 /* Debug */,
+				0EC71C6EF0404FA8B2495349 /* Release */,
+				84400BF061BB4E9BA82E7FDF /* MinSizeRel */,
+				9199F25D31B14689AC5E4813 /* RelWithDebInfo */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 7529AD2200E148F7BBB8FE92 /* Project object */;
+}

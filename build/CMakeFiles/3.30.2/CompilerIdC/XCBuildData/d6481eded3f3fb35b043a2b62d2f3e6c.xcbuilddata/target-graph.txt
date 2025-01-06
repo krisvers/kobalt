@@ -1,0 +1,9 @@
+Target dependency graph (5 targets)
+Target 'ALL_BUILD' in project 'kobalt'
+➜ Explicit dependency on target 'kobalt' in project 'kobalt'
+➜ Explicit dependency on target 'ZERO_CHECK' in project 'kobalt'
+Target 'kobalt' in project 'kobalt'
+➜ Explicit dependency on target 'ZERO_CHECK' in project 'kobalt'
+Target 'ZERO_CHECK' in project 'kobalt' (no dependencies)
+Target 'CompilerIdCXX' in project 'CompilerIdCXX' (no dependencies)
+Target 'CompilerIdC' in project 'CompilerIdC' (no dependencies)

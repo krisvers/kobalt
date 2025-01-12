@@ -41,7 +41,7 @@ KOBALT_HANDLE(Device);
 KOBALT_HANDLE(Shader);
 KOBALT_HANDLE(VertexInputState);
 KOBALT_HANDLE(RasterizationState);
-KOBALT_HANDLE(GraphicsPipeline);
+KOBALT_HANDLE(Pipeline);
 KOBALT_HANDLE(Buffer);
 KOBALT_HANDLE(Texture);
 KOBALT_HANDLE(CommandList);
@@ -352,8 +352,10 @@ uint32_t getSwapchainImageCount(Swapchain swapchain);
 
 bool createShaderSPIRV(Shader& shader, Device device, void const* data, uint32_t size);
 bool createVertexInputState(VertexInputState& vertexInputState, Device device, Topology topology, VertexAttribute const* vertexAttributes, uint32_t vertexAttributeCount, VertexBinding const* vertexBindings, uint32_t vertexBindingCount);
-bool createRasterizationState(RasterizationState& rasterizationState, Device device, FillMode fillMode, CullMode cullMode, FrontFace frontFace);
-bool createGraphicsPipeline(GraphicsPipeline& graphicsPipeline, Device device, VertexInputState vertexInputState, RasterizationState rasterizationState, Shader vertexShader, Shader fragmentShader, Shader geometryShader);
+bool createRasterizationState(RasterizationState& rasterizationState, Device device, FillMode fillMode, CullMode cullMode, FrontFace frontFace, float depthBias, float depthBiasClamp, float slopeScaledDepthBias);
+bool createGraphicsPipeline(Pipeline& pipeline, Device device, VertexInputState vertexInputState, RasterizationState rasterizationState, Shader vertexShader, Shader fragmentShader, Shader geometryShader);
+bool storePipeline(Pipeline pipeline, void* data, uint64_t* size);
+bool loadPipeline(Pipeline& pipeline, void* data, uint64_t size);
 
 bool createBuffer(Buffer& buffer, Device device, uint64_t size, MemoryLocation location, BufferUsage usage);
 bool uploadBufferData(Buffer buffer, uint64_t offset, void const* data, uint64_t size);
@@ -378,7 +380,7 @@ bool beginRecording(CommandList commandList);
 bool recordSecondaryCommands(CommandList commandList, CommandList secondaryList);
 bool endRecording(CommandList commandList);
 
-bool bindGraphicsPipeline(CommandList commandList, GraphicsPipeline pipeline);
+bool bindGraphicsPipeline(CommandList commandList, Pipeline pipeline);
 bool bindVertexBuffer(CommandList commandList, uint32_t index, Buffer buffer, uint64_t offset);
 bool bindIndexBuffer(CommandList commandList, Buffer buffer, uint64_t offset);
 
@@ -717,7 +719,7 @@ static void defaultDebugMessenger(const char* message, DebugSeverity severity, O
     const char* typeStr = (object != nullptr) ? objectTypeStrings[static_cast<uint32_t>(objBase->obj.type)] : "NONE";
 
     if (object != nullptr) {
-        printf("[kobalt] %s (Source Object: %s %p \"%s\"): %s\n", sevStr, typeStr, reinterpret_cast<void*>(objBase), objBase->debugName, message);
+        printf("[kobalt] %s (Source Object: %s 0x%016llx \"%s\"): %s\n", sevStr, typeStr, reinterpret_cast<unsigned long long>(objBase), objBase->debugName, message);
     } else {
         printf("[kobalt] %s: %s\n", sevStr, message);
     }
@@ -860,6 +862,9 @@ void destroy(Object_t* object) {
             return;
         case internal::ObjectType::Shader:
             delete reinterpret_cast<internal::Shader_t*>(object);
+            return;
+        case internal::ObjectType::VertexInputState:
+            delete reinterpret_cast<internal::VertexInputState_t*>(object);
             return;
         default:
             KOBALT_PRINT(DebugSeverity::Error, nullptr, "unknown object type to destroy");

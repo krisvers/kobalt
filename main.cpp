@@ -22,6 +22,23 @@ void formatMemorySize(uint64_t& size, char& suffix, bool decimal) {
     suffix = suffixes[index];
 }
 
+bool loadShader(kobalt::Shader& shader, kobalt::Device device, const char* path) {
+    std::fstream file(path, std::ios::binary | std::ios::in);
+    if (!file.good()) {
+        return false;
+    }
+
+    file.seekg(0, std::ios::end);
+    size_t size = file.tellg();
+    file.seekg(0, std::ios::beg);
+
+    std::vector<char> data(size);
+    file.read(&data[0], size);
+    file.close();
+
+    return kobalt::createShaderSPIRV(shader, device, reinterpret_cast<uint32_t const*>(data.data()), size);
+}
+
 int main() {
     assert(glfwInit());
 
@@ -60,10 +77,31 @@ int main() {
     kobalt::Device device;
     assert(kobalt::createDevice(device, 0, { false, true }));
 
+    kobalt::Shader vertexShader;
+    assert(loadShader(vertexShader, device, "shader.vertex.spv"));
+
+    kobalt::Shader pixelShader;
+    assert(loadShader(pixelShader, device, "shader.pixel.spv"));
+
+    kobalt::VertexAttribute attributes[2] = {
+        { 0, 0, kobalt::VertexAttributeType::Float32, 3, 0 },
+        { 1, 0, kobalt::VertexAttributeType::Float32, 2, sizeof(float) * 3 },
+    };
+
+    kobalt::VertexBinding bindings[1] = {
+        { 0, sizeof(float) * 5, false },
+    };
+
+    kobalt::VertexInputState vertexInputState;
+    assert(kobalt::createVertexInputState(vertexInputState, device, kobalt::Topology::TriangleList, attributes, 2, bindings, 1));
+
     while (!glfwWindowShouldClose(window)) {
         glfwPollEvents();
     }
 
+    kobalt::destroy(vertexInputState);
+    kobalt::destroy(vertexShader);
+    kobalt::destroy(pixelShader);
     kobalt::destroy(device);
     kobalt::deinit();
 

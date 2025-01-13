@@ -363,10 +363,11 @@ bool downloadBufferData(Buffer buffer, uint64_t offset, void* data, uint64_t siz
 bool mapBuffer(void*& mappedPointer, Buffer buffer, uint64_t offset, uint64_t size);
 void unmapBuffer(Buffer buffer, void* pointer);
 
-bool createTexture2D(Texture& texture, Device device, uint32_t width, uint32_t height, TextureFormat format, MemoryLocation location, TextureUsage usage);
-bool createTexture3D(Texture& texture, Device device, uint32_t width, uint32_t height, uint32_t depth, TextureFormat format, MemoryLocation location, TextureUsage usage);
-bool createTexture2DArray(Texture& texture, Device device, uint32_t width, uint32_t height, uint32_t layers, TextureFormat format, MemoryLocation location, TextureUsage usage);
-bool createTexture3DArray(Texture& texture, Device device, uint32_t width, uint32_t height, uint32_t depth, TextureFormat format, uint32_t layers, MemoryLocation location, TextureUsage usage);
+bool createTexture1D(Texture& texture, Device device, uint32_t width, TextureFormat format, MemoryLocation location, TextureUsage usage);
+bool createTexture2D(Texture& texture, Device device, uint32_t width, uint32_t height, uint32_t samples, TextureFormat format, MemoryLocation location, TextureUsage usage);
+bool createTexture3D(Texture& texture, Device device, uint32_t width, uint32_t height, uint32_t depth, uint32_t samples, TextureFormat format, MemoryLocation location, TextureUsage usage);
+bool createTexture1DArray(Texture& texture, Device device, uint32_t width, TextureFormat format, uint32_t layers, MemoryLocation location, TextureUsage usage);
+bool createTexture2DArray(Texture& texture, Device device, uint32_t width, uint32_t height, uint32_t layers, uint32_t samples, TextureFormat format, MemoryLocation location, TextureUsage usage);
 
 bool createCommandList(CommandList& commandList, Device device, CommandListSpecialization specialization);
 bool createSecondaryCommandList(CommandList& commandList, Device dev);
@@ -608,6 +609,11 @@ inline VkFormat vertexAttributeTypeToVkFormat(VertexAttributeType type, uint32_t
     return VK_FORMAT_MAX_ENUM;
 }
 
+struct EnabledFeaturesX {
+    VkStructureType sType;
+    EnabledFeaturesX* pNext;
+};
+
 struct ObjectBase_t {
     Object_t obj;
     char debugName[64];
@@ -731,7 +737,8 @@ static DebugCallback debugCallback = nullptr;
 #endif /* #ifdef KOBALT_DEFAULT_DEBUG_MESSENGER */
 
 #define KOBALT_PRINT(sev_, obj_, msg_) if (internal::debugCallback != nullptr) { internal::debugCallback(msg_, sev_, obj_); }
-#define KOBALT_PRINTF(sev_, obj_, fmt_, ...) if (internal::debugCallback != nullptr) { char buffer[512]; snprintf(buffer, 512, fmt_, __VA_ARGS__); internal::debugCallback(buffer, sev_, obj_); }
+#define KOBALT_PRINTF(sev_, obj_, fmt_, ...) if (internal::debugCallback != nullptr) { char buffer[256]; snprintf(buffer, 256, fmt_, __VA_ARGS__); internal::debugCallback(buffer, sev_, obj_); }
+#define KOBALT_PRINTF_SIZED(sev_, obj_, bufsize_, fmt_, ...) if (internal::debugCallback != nullptr) { char buffer[bufsize_]; snprintf(buffer, bufsize_, fmt_, __VA_ARGS__); internal::debugCallback(buffer, sev_, obj_); }
 
 static VkInstance vkInstance = nullptr;
 static std::vector<VkPhysicalDevice> vkPhysicalDevices;
@@ -744,7 +751,7 @@ static VkBool32 vkDebugMessengerCallback(VkDebugUtilsMessageSeverityFlagBitsEXT 
         severity = DebugSeverity::Warning;
     }
 
-    KOBALT_PRINTF(severity, nullptr, "%s", pCallbackData->pMessage);
+    KOBALT_PRINTF_SIZED(severity, nullptr, 2048, "%s", pCallbackData->pMessage);
     return VK_FALSE;
 }
 
@@ -768,9 +775,9 @@ bool init(bool debug) {
 
 #ifdef _WIN32
     extensions.push_back("VK_KHR_win32_surface");
-#elif APPLE
+#elif __APPLE__
     flags |= VK_INSTANCE_CREATE_ENUMERATE_PORTABILITY_BIT_KHR;
-    extensions.push_back("VK_KHR_portability_enumeration");
+    extensions.push_back(VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME);
     extensions.push_back("VK_EXT_metal_surface");
 #ifdef TARGET_OS_MAC
     extensions.push_back(prism::vk::Extension("VK_MVK_macos_surface", false));
@@ -1020,6 +1027,10 @@ bool createDevice(Device& device, uint32_t id, DeviceSupport support) {
     if (support.swapchain) {
         extensions.push_back(VK_KHR_SWAPCHAIN_EXTENSION_NAME);
     }
+    
+#ifdef __APPLE__
+    extensions.push_back("VK_KHR_portability_subset");
+#endif /* #ifdef __APPLE__ */
 
     std::vector<VkQueueFamilyProperties> queueFamilyProperties;
     prism::vk::getPhysicalDeviceQueueFamilyProperties(vkPhysical, queueFamilyProperties);
@@ -1085,13 +1096,27 @@ bool createDevice(Device& device, uint32_t id, DeviceSupport support) {
         queueCI.queueFamilyIndex = bestTransfer;
         queueCIs.push_back(queueCI);
     }
+    
+    std::vector<internal::EnabledFeaturesX*> enabledFeatures;
 
     VkPhysicalDeviceDynamicRenderingFeaturesKHR drFeatures = {};
     drFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DYNAMIC_RENDERING_FEATURES_KHR;
     drFeatures.dynamicRendering = support.dynamicRenderState;
+    if (support.dynamicRenderState) {
+        enabledFeatures.push_back(reinterpret_cast<internal::EnabledFeaturesX*>(&drFeatures));
+    }
+    
+    void* pNext = nullptr;
+    if (!enabledFeatures.empty()) {
+        for (uint32_t i = 0; i < enabledFeatures.size() - 1; ++i) {
+            enabledFeatures[i]->pNext = enabledFeatures[i + 1];
+        }
+    
+        pNext = enabledFeatures[0];
+    }
 
     VkDevice vkDevice;
-    if (!prism::vk::createDevice(vkPhysical, queueCIs, extensions, &drFeatures, nullptr, nullptr, vkDevice)) {
+    if (!prism::vk::createDevice(vkPhysical, queueCIs, extensions, pNext, nullptr, nullptr, vkDevice)) {
         KOBALT_PRINT(DebugSeverity::Error, nullptr, "internal Vulkan error: device creation");
         return false;
     }
@@ -1167,8 +1192,8 @@ bool createVertexInputState(VertexInputState& vertexInputState, Device device, T
             if (vertexBindings[j].binding == vertexAttributes[i].binding) {
                 foundBinding = true;
                 uint32_t size = internal::vertexAttributeTypeSize(vertexAttributes[i].type) * vertexAttributes[i].count;
-                if (size + vertexAttributes[i].offset > vertexBindings[i].size) {
-                    KOBALT_PRINTF(DebugSeverity::Error, device, "vertexAttributes[%u].offset has invalid value: %u; attributes must stay within size bounds of their binding (this attribute has a size of %u)", i, vertexAttributes[i].offset, size);
+                if (size + vertexAttributes[i].offset > vertexBindings[j].size) {
+                    KOBALT_PRINTF(DebugSeverity::Error, device, "vertexAttributes[%u].offset has invalid value: %u; attributes must stay within size bounds of their binding (binding %u has a size bound of %u and this attribute has a size of %u)", i, vertexAttributes[i].offset, j, vertexBindings[j].size, size);
                     return false;
                 }
                 break;

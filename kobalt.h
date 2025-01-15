@@ -9,9 +9,12 @@
 
 #define KOBALT_HANDLE(handle_) typedef struct ::kobalt::Object_t* handle_
 
-#define KOBALT_ENUM_BITMASK(T_)                                      \
-inline T_ operator|(T_ a, T_ b) {                                    \
+#define KOBALT_ENUM_BITMASK(T_) \
+inline T_ operator|(T_ a, T_ b) { \
     return static_cast<T_>(static_cast<uint32_t>(a) | static_cast<uint32_t>(b)); \
+} \
+inline T_ operator&(T_ a, T_ b) { \
+    return static_cast<T_>(static_cast<uint32_t>(a) & static_cast<uint32_t>(b)); \
 }
 
 namespace kobalt {
@@ -245,10 +248,12 @@ enum class FillMode {
 };
 
 enum class CullMode {
-    Back,
-    Front,
-    None,
+    None = 0x0,
+    Back = 0x1,
+    Front = 0x2,
 };
+
+KOBALT_ENUM_BITMASK(CullMode);
 
 enum class FrontFace {
     Clockwise,
@@ -433,6 +438,36 @@ inline VkPrimitiveTopology topologyToVkPrimitiveTopology(Topology topology) {
         case Topology::TriangleFan: return VK_PRIMITIVE_TOPOLOGY_TRIANGLE_FAN;
         case Topology::PatchList: return VK_PRIMITIVE_TOPOLOGY_PATCH_LIST;
         default: return VK_PRIMITIVE_TOPOLOGY_MAX_ENUM;
+    }
+}
+
+inline VkPolygonMode fillModeToVkPolygonMode(FillMode fillMode) {
+    switch (fillMode) {
+        case FillMode::Fill: return VK_POLYGON_MODE_FILL;
+        case FillMode::Wireframe: return VK_POLYGON_MODE_LINE;
+        case FillMode::Points: return VK_POLYGON_MODE_POINT;
+        default: return VK_POLYGON_MODE_MAX_ENUM;
+    }
+}
+
+inline VkCullModeFlags cullModeToVkCullModeFlags(CullMode cullMode) {
+    VkCullModeFlags flags = VK_CULL_MODE_NONE;
+    if ((cullMode & CullMode::Back) != CullMode::None) {
+        flags |= VK_CULL_MODE_BACK_BIT;
+    }
+
+    if ((cullMode & CullMode::Front) != CullMode::None) {
+        flags |= VK_CULL_MODE_FRONT_BIT;
+    }
+
+    return flags;
+}
+
+inline VkFrontFace frontFaceToVkFrontFace(FrontFace frontFace) {
+    switch (frontFace) {
+        case FrontFace::Clockwise: return VK_FRONT_FACE_CLOCKWISE;
+        case FrontFace::CounterClockwise: return VK_FRONT_FACE_COUNTER_CLOCKWISE;
+        default: return VK_FRONT_FACE_MAX_ENUM;
     }
 }
 
@@ -698,6 +733,24 @@ struct VertexInputState_t {
 
         inputAssemblyCI.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
         inputAssemblyCI.topology = internal::topologyToVkPrimitiveTopology(topo);
+    }
+};
+
+struct RasterizationState_t {
+    VkPipelineRasterizationStateCreateInfo createInfo = {};
+    Device device;
+
+    RasterizationState_t(Device device, FillMode fillMode, CullMode cullMode, FrontFace frontFace, float depthBias, float depthBiasClamp, float slopeScaledDepthBias) : device(device) {
+        createInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_RASTERIZATION_ORDER_AMD;
+        createInfo.depthClampEnable = depthBiasClamp != 0.0f;
+        createInfo.polygonMode = internal::fillModeToVkPolygonMode(fillMode);
+        createInfo.cullMode = internal::cullModeToVkCullModeFlags(cullMode);
+        createInfo.frontFace = internal::frontFaceToVkFrontFace(frontFace);
+        createInfo.depthBiasEnable = depthBias != 0.0f;
+        createInfo.depthBiasConstantFactor = 1.0f;
+        createInfo.depthBiasClamp = depthBiasClamp;
+        createInfo.depthBiasSlopeFactor = slopeScaledDepthBias;
+        createInfo.lineWidth = 1.0f;
     }
 };
 
@@ -1209,6 +1262,10 @@ bool createVertexInputState(VertexInputState& vertexInputState, Device device, T
     internal::VertexInputState_t* viState = new internal::VertexInputState_t(device, topology, vertexAttributes, vertexAttributeCount, vertexBindings, vertexBindingCount);
     vertexInputState = &viState->base.obj;
     return true;
+}
+
+bool createRasterizationState(RasterizationState& rasterizationState, Device device, FillMode fillMode, CullMode cullMode, FrontFace frontFace, float depthBias, float depthBiasClamp, float slopeScaledDepthBias) {
+
 }
 
 } /* namespace kobalt */

@@ -4,7 +4,14 @@
 #include <cstdint>
 
 #ifdef KOBALT_GLFW
+
+#if defined(_glfw3_h_) && !defined(VK_VERSION_1_0)
+#define KOBALT_INTERNAL_GLFW_VULKAN_NOT_DEFINED
+#else
+#define VK_VERSION_1_0
 #include <GLFW/glfw3.h>
+#endif /* #ifdef _glfw3_h_ */
+
 #endif /* #ifdef KOBALT_GLFW */
 
 #define KOBALT_HANDLE(handle_) typedef struct ::kobalt::Object_t* handle_
@@ -44,6 +51,10 @@ KOBALT_HANDLE(Device);
 KOBALT_HANDLE(Shader);
 KOBALT_HANDLE(VertexInputState);
 KOBALT_HANDLE(RasterizationState);
+KOBALT_HANDLE(RenderAttachmentState);
+KOBALT_HANDLE(RenderSubpass);
+KOBALT_HANDLE(RenderPass);
+KOBALT_HANDLE(Framebuffer);
 KOBALT_HANDLE(Pipeline);
 KOBALT_HANDLE(Buffer);
 KOBALT_HANDLE(Texture);
@@ -198,6 +209,17 @@ enum class TextureFormat {
     D32_Float_S8_UInt,
 };
 
+enum class TextureLayout {
+    Undefined,
+    RenderTarget,
+    DepthStencilTarget,
+    DepthStencilRead,
+    ShaderRead,
+    TransferSrc,
+    TransferDst,
+    PresentSrc,
+};
+
 enum class Topology {
     PointList,
     LineList,
@@ -260,6 +282,18 @@ enum class FrontFace {
     CounterClockwise,
 };
 
+enum class RenderAttachmentLoadOp {
+    DontCare,
+    Clear,
+    Load,
+};
+
+enum class RenderAttachmentStoreOp {
+    DontCare,
+    Clear,
+    Store,
+};
+
 struct DeviceSupport {
     bool dynamicRenderState;
     bool swapchain;
@@ -320,6 +354,34 @@ struct VertexBinding {
     bool advancePerInstance;
 };
 
+struct RenderAttachment {
+    TextureFormat format;
+    uint32_t sampleCount;
+    RenderAttachmentLoadOp loadOp;
+    RenderAttachmentStoreOp storeOp;
+    RenderAttachmentLoadOp stencilLoadOp;
+    RenderAttachmentStoreOp stencilStoreOp;
+    TextureLayout initialLayout;
+    TextureLayout finalLayout;
+};
+
+struct RenderAttachmentReference {
+    uint32_t index;
+    TextureLayout layout;
+};
+
+struct GraphicsPipelineAttachment {
+    TextureFormat format;
+    uint32_t sampleCount;
+};
+
+struct FramebufferAttachment {
+    uint32_t width;
+    uint32_t height;
+    uint32_t layerCount;
+    TextureUsage usage;
+};
+
 typedef void (*DebugCallback)(const char* message, DebugSeverity severity, Object_t* srcObject);
 
 /* you are able to call this before initialization */
@@ -340,11 +402,21 @@ namespace wsi {
 
 KOBALT_HANDLE(Swapchain);
 
+enum class PresentMode {
+    Immediate = 0x1,
+    VSync = 0x2,
+    Mailbox = 0x4,
+
+    Any = Immediate | VSync | Mailbox,
+};
+
+KOBALT_ENUM_BITMASK(PresentMode);
+
 #ifdef KOBALT_GLFW
 
 namespace glfw {
 
-bool createSwapchain(Swapchain& swapchain, Device device, GLFWwindow* window, uint32_t width, uint32_t height, TextureUsage usage, bool sRGBFormat, bool vsync);
+bool createSwapchain(Swapchain& swapchain, Device device, GLFWwindow* window, uint32_t width, uint32_t height, uint32_t layerCount, TextureUsage usage, bool sRGBFormat, PresentMode presentMode);
 
 } /* namespace glfw */
 
@@ -358,7 +430,12 @@ uint32_t getSwapchainImageCount(Swapchain swapchain);
 bool createShaderSPIRV(Shader& shader, Device device, void const* data, uint32_t size);
 bool createVertexInputState(VertexInputState& vertexInputState, Device device, Topology topology, VertexAttribute const* vertexAttributes, uint32_t vertexAttributeCount, VertexBinding const* vertexBindings, uint32_t vertexBindingCount);
 bool createRasterizationState(RasterizationState& rasterizationState, Device device, FillMode fillMode, CullMode cullMode, FrontFace frontFace, float depthBias, float depthBiasClamp, float slopeScaledDepthBias);
-bool createGraphicsPipeline(Pipeline& pipeline, Device device, VertexInputState vertexInputState, RasterizationState rasterizationState, Shader vertexShader, Shader fragmentShader, Shader geometryShader);
+
+bool createRenderAttachmentState(RenderAttachmentState& renderAttachmentState, Device device, RenderAttachment const* renderAttachments, uint32_t renderAttachmentCount);
+bool createRenderSubpass(RenderSubpass& subpass, Device device, RenderAttachmentReference const* inputAttachments, uint32_t inputAttachmentCount, RenderAttachmentReference const* renderTargets, uint32_t renderTargetCount, RenderAttachmentReference const* depthStencilTarget);
+bool createRenderPass(RenderPass& renderPass, Device device, RenderSubpass const* subpasses, uint32_t subpassCount, RenderAttachmentState renderAttachmentState);
+
+bool createGraphicsPipeline(Pipeline& pipeline, Device device, VertexInputState vertexInputState, RasterizationState rasterizationState, Shader vertexShader, Shader fragmentShader, Shader geometryShader, GraphicsPipelineAttachment const* inputAttachments, uint32_t inputAttachmentCount, GraphicsPipelineAttachment const* renderTargets, uint32_t renderTargetCount, GraphicsPipelineAttachment const* depthStencilTarget, uint32_t subpass);
 bool storePipeline(Pipeline pipeline, void* data, uint64_t* size);
 bool loadPipeline(Pipeline& pipeline, void* data, uint64_t size);
 
@@ -397,6 +474,10 @@ bool drawIndexed(CommandList commandList, uint32_t index, uint32_t count);
 
 } /* namespace kobalt */
 
+#if !defined(KOBALT_IMPL) && defined(KOBALT_INTERNAL_GLFW_VULKAN_NOT_DEFINED)
+#undef KOBALT_INTERNAL_GLFW_VULKAN_NOT_DEFINED
+#endif /* #ifndef KOBALT_IMPL */
+
 #ifdef KOBALT_IMPL
 
 #define PRISM_VK_IMPL
@@ -423,6 +504,14 @@ bool drawIndexed(CommandList commandList, uint32_t index, uint32_t count);
 #ifdef KOBALT_DEFAULT_DEBUG_MESSENGER
 #include <cstdio>
 #endif /* #ifdef KOBALT_DEFAULT_DEBUG_MESSENGER */
+
+#ifdef KOBALT_INTERNAL_GLFW_VULKAN_NOT_DEFINED
+extern "C" {
+
+GLFWAPI VkResult glfwCreateWindowSurface(VkInstance instance, GLFWwindow* window, const VkAllocationCallbacks* allocator, VkSurfaceKHR* surface);
+
+}
+#endif /* #ifdef KOBALT_INTERNAL_GLFW_VULKAN_NOT_DEFINED */
 
 namespace kobalt {
 
@@ -451,7 +540,7 @@ inline VkPolygonMode fillModeToVkPolygonMode(FillMode fillMode) {
 }
 
 inline VkCullModeFlags cullModeToVkCullModeFlags(CullMode cullMode) {
-    VkCullModeFlags flags = VK_CULL_MODE_NONE;
+    VkCullModeFlags flags = 0;
     if ((cullMode & CullMode::Back) != CullMode::None) {
         flags |= VK_CULL_MODE_BACK_BIT;
     }
@@ -644,6 +733,31 @@ inline VkFormat vertexAttributeTypeToVkFormat(VertexAttributeType type, uint32_t
     return VK_FORMAT_MAX_ENUM;
 }
 
+inline VkImageUsageFlags textureUsageToVkImageUsageFlags(TextureUsage usage) {
+    VkImageUsageFlags flags = 0;
+    if ((usage & TextureUsage::SampledTexture) == TextureUsage::SampledTexture) {
+        flags |= VK_IMAGE_USAGE_SAMPLED_BIT;
+    }
+
+    if ((usage & TextureUsage::StorageTexture) == TextureUsage::StorageTexture) {
+        flags |= VK_IMAGE_USAGE_STORAGE_BIT;
+    }
+
+    if ((usage & TextureUsage::RenderTarget) == TextureUsage::RenderTarget) {
+        flags |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+    }
+
+    if ((usage & TextureUsage::DepthTarget) == TextureUsage::DepthTarget) {
+        flags |= VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+    }
+
+    if ((usage & TextureUsage::StencilTarget) == TextureUsage::StencilTarget) {
+        flags |= VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+    }
+
+    return flags;
+}
+
 struct EnabledFeaturesX {
     VkStructureType sType;
     EnabledFeaturesX* pNext;
@@ -686,13 +800,30 @@ struct Device_t {
     }
 };
 
+namespace wsi {
+
+struct Swapchain_t {
+    ObjectBase_t base;
+
+    Device_t* device;
+    VkSwapchainKHR vkSwapchain;
+    
+    Swapchain_t(Device_t* device, VkSwapchainKHR vkSwapchain) : base(&device->base.obj, internal::ObjectType::WSI_Swapchain), device(device), vkSwapchain(vkSwapchain) {}
+
+    ~Swapchain_t() {
+        vkDestroySwapchainKHR(device->vkDevice, vkSwapchain, nullptr);
+    }
+};
+
+} /* namespace wsi */
+
 struct Shader_t {
     ObjectBase_t base;
 
     Device_t* device;
     VkShaderModule vkShaderModule;
 
-    Shader_t(Device_t* device, VkShaderModule vkShaderModule) : base(reinterpret_cast<Object_t*>(device), internal::ObjectType::Shader), device(device), vkShaderModule(vkShaderModule) {}
+    Shader_t(Device_t* device, VkShaderModule vkShaderModule) : base(&device->base.obj, internal::ObjectType::Shader), device(device), vkShaderModule(vkShaderModule) {}
 
     ~Shader_t() {
         vkDestroyShaderModule(device->vkDevice, vkShaderModule, nullptr);
@@ -737,10 +868,11 @@ struct VertexInputState_t {
 };
 
 struct RasterizationState_t {
-    VkPipelineRasterizationStateCreateInfo createInfo = {};
-    Device device;
+    ObjectBase_t base;
 
-    RasterizationState_t(Device device, FillMode fillMode, CullMode cullMode, FrontFace frontFace, float depthBias, float depthBiasClamp, float slopeScaledDepthBias) : device(device) {
+    VkPipelineRasterizationStateCreateInfo createInfo = {};
+
+    RasterizationState_t(Device device, FillMode fillMode, CullMode cullMode, FrontFace frontFace, float depthBias, float depthBiasClamp, float slopeScaledDepthBias) : base(device, ObjectType::RasterizationState) {
         createInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_RASTERIZATION_ORDER_AMD;
         createInfo.depthClampEnable = depthBiasClamp != 0.0f;
         createInfo.polygonMode = internal::fillModeToVkPolygonMode(fillMode);
@@ -770,7 +902,7 @@ static void defaultDebugMessenger(const char* message, DebugSeverity severity, O
         "Buffer",
         "Texture",
         "CommandList",
-        "Swapchain"
+        "wsi::Swapchain"
     };
 
     ObjectBase_t* objBase = reinterpret_cast<ObjectBase_t*>(object);
@@ -793,8 +925,20 @@ static DebugCallback debugCallback = nullptr;
 #define KOBALT_PRINTF(sev_, obj_, fmt_, ...) if (internal::debugCallback != nullptr) { char buffer[256]; snprintf(buffer, 256, fmt_, __VA_ARGS__); internal::debugCallback(buffer, sev_, obj_); }
 #define KOBALT_PRINTF_SIZED(sev_, obj_, bufsize_, fmt_, ...) if (internal::debugCallback != nullptr) { char buffer[bufsize_]; snprintf(buffer, bufsize_, fmt_, __VA_ARGS__); internal::debugCallback(buffer, sev_, obj_); }
 
+enum class SurfaceType {
+    GLFW
+};
+
+struct Surface {
+    VkSurfaceKHR vkSurface;
+    VkSurfaceCapabilitiesKHR vkCapabilities;
+    SurfaceType type;
+    void* window;
+};
+
 static VkInstance vkInstance = nullptr;
 static std::vector<VkPhysicalDevice> vkPhysicalDevices;
+static std::vector<Surface> surfaces;
 
 static VkDebugUtilsMessengerEXT vkDebugMessengerEXT = nullptr;
 
@@ -806,6 +950,158 @@ static VkBool32 vkDebugMessengerCallback(VkDebugUtilsMessageSeverityFlagBitsEXT 
 
     KOBALT_PRINTF_SIZED(severity, nullptr, 2048, "%s", pCallbackData->pMessage);
     return VK_FALSE;
+}
+
+static bool createSwapchainGeneric(kobalt::wsi::Swapchain& swapchain, Device_t* dev, Surface const& surface, uint32_t width, uint32_t height, uint32_t layerCount, TextureUsage usage, bool sRGBFormat, kobalt::wsi::PresentMode presentMode) {
+    uint32_t surfaceFormatCount;
+    if (vkGetPhysicalDeviceSurfaceFormatsKHR(dev->vkPhysicalDevice, surface.vkSurface, &surfaceFormatCount, nullptr) != VK_SUCCESS) {
+        KOBALT_PRINT(DebugSeverity::Error, &dev->base.obj, "internal Vulkan error");
+        return false;
+    }
+
+    std::vector<VkSurfaceFormatKHR> surfaceFormats(surfaceFormatCount);
+    if (vkGetPhysicalDeviceSurfaceFormatsKHR(dev->vkPhysicalDevice, surface.vkSurface, &surfaceFormatCount, &surfaceFormats[0]) != VK_SUCCESS) {
+        KOBALT_PRINT(DebugSeverity::Error, &dev->base.obj, "internal Vulkan error");
+        return false;
+    }
+
+    uint32_t preferredSurfaceFormat = 0;
+    for (uint32_t i = 0; i < surfaceFormatCount; ++i) {
+        if (sRGBFormat) {
+            switch (surfaceFormats[i].format) {
+                case VK_FORMAT_R8G8B8_SRGB:
+                case VK_FORMAT_B8G8R8_SRGB:
+                case VK_FORMAT_R8G8B8A8_SRGB:
+                case VK_FORMAT_B8G8R8A8_SRGB:
+                    if (surfaceFormats[i].colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR) {
+                        preferredSurfaceFormat = i;
+                        i = surfaceFormatCount;
+                    }
+                default:
+                    break;
+            }
+            continue;
+        }
+
+        switch (surfaceFormats[i].format) {
+            case VK_FORMAT_R8G8B8_UNORM:
+            case VK_FORMAT_B8G8R8_UNORM:
+            case VK_FORMAT_R8G8B8A8_UNORM:
+            case VK_FORMAT_B8G8R8A8_UNORM:
+                if (surfaceFormats[i].colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR) {
+                    preferredSurfaceFormat = i;
+                    i = surfaceFormatCount;
+                }
+            default:
+                break;
+        }
+    }
+
+    if (sRGBFormat) {
+        switch (surfaceFormats[preferredSurfaceFormat].format) {
+            case VK_FORMAT_R8G8B8_SRGB:
+            case VK_FORMAT_B8G8R8_SRGB:
+            case VK_FORMAT_R8G8B8A8_SRGB:
+            case VK_FORMAT_B8G8R8A8_SRGB:
+                break;
+            default:
+                KOBALT_PRINT(DebugSeverity::Error, &dev->base.obj, "failed to find suitable sRGB format");
+                return false;
+        }
+    } else {
+        switch (surfaceFormats[preferredSurfaceFormat].format) {
+            case VK_FORMAT_R8G8B8_UNORM:
+            case VK_FORMAT_B8G8R8_UNORM:
+            case VK_FORMAT_R8G8B8A8_UNORM:
+            case VK_FORMAT_B8G8R8A8_UNORM:
+                break;
+            default:
+                KOBALT_PRINT(DebugSeverity::Error, &dev->base.obj, "failed to find suitable non-sRGB format");
+                return false;
+        }
+    }
+
+    uint32_t presentModeCount;
+    if (vkGetPhysicalDeviceSurfacePresentModesKHR(dev->vkPhysicalDevice, surface.vkSurface, &presentModeCount, nullptr) != VK_SUCCESS) {
+        KOBALT_PRINT(DebugSeverity::Error, &dev->base.obj, "internal Vulkan error");
+        return false;
+    }
+
+    std::vector<VkPresentModeKHR> presentModes(presentModeCount);
+    if (vkGetPhysicalDeviceSurfacePresentModesKHR(dev->vkPhysicalDevice, surface.vkSurface, &presentModeCount, &presentModes[0]) != VK_SUCCESS) {
+        KOBALT_PRINT(DebugSeverity::Error, &dev->base.obj, "internal Vulkan error");
+        return false;
+    }
+
+    uint32_t preferredPresentMode = 0;
+    uint32_t preferredPresentModeScore = 0;
+
+    const uint32_t mailboxMailboxScore = 4;
+
+    const uint32_t fifoRelaxedVSyncScore = 3;
+    const uint32_t fifoVSyncScore = 2;
+    const uint32_t mailboxVSyncScore = 1;
+
+    const uint32_t immediateImmediateScore = 2;
+    const uint32_t fifoRelaxedImmediateScore = 1;
+
+    for (uint32_t i = 0; i < presentModeCount; ++i) {
+        if ((presentMode & kobalt::wsi::PresentMode::Mailbox) == kobalt::wsi::PresentMode::Mailbox && presentModes[i] == VK_PRESENT_MODE_MAILBOX_KHR && preferredPresentMode < mailboxMailboxScore) {
+            preferredPresentMode = i;
+            preferredPresentModeScore = mailboxMailboxScore;
+        }
+
+        if ((presentMode & kobalt::wsi::PresentMode::VSync) == kobalt::wsi::PresentMode::VSync) {
+            if (presentModes[i] == VK_PRESENT_MODE_FIFO_RELAXED_KHR && preferredPresentMode < fifoRelaxedVSyncScore) {
+                preferredPresentMode = i;
+                preferredPresentModeScore = fifoRelaxedVSyncScore;
+            } else if (presentModes[i] == VK_PRESENT_MODE_FIFO_KHR && preferredPresentModeScore < fifoVSyncScore) {
+                preferredPresentMode = i;
+                preferredPresentModeScore = fifoVSyncScore;
+            }
+        }
+
+        if ((presentMode & kobalt::wsi::PresentMode::Immediate) == kobalt::wsi::PresentMode::Immediate) {
+            if (presentModes[i] == VK_PRESENT_MODE_IMMEDIATE_KHR && preferredPresentModeScore < immediateImmediateScore) {
+                preferredPresentMode = i;
+                preferredPresentModeScore = immediateImmediateScore;
+            } else if (presentModes[i] == VK_PRESENT_MODE_FIFO_RELAXED_KHR && preferredPresentModeScore < fifoRelaxedImmediateScore) {
+                preferredPresentMode = i;
+                preferredPresentModeScore = fifoRelaxedImmediateScore;
+            }
+        }
+    }
+
+    if (preferredPresentModeScore == 0) {
+        KOBALT_PRINT(DebugSeverity::Error, &dev->base.obj, "failed to find suitable present mode");
+        return false;
+    }
+
+    VkSwapchainCreateInfoKHR swapchainCI = {};
+    swapchainCI.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
+    swapchainCI.surface = surface.vkSurface;
+    swapchainCI.minImageCount = std::min(std::max(presentModes[preferredPresentMode] == VK_PRESENT_MODE_MAILBOX_KHR ? 3u : 2u, surface.vkCapabilities.minImageCount), surface.vkCapabilities.maxImageCount);
+    swapchainCI.imageFormat = surfaceFormats[preferredSurfaceFormat].format;
+    swapchainCI.imageColorSpace = surfaceFormats[preferredSurfaceFormat].colorSpace;
+    swapchainCI.imageExtent.width = width;
+    swapchainCI.imageExtent.height = height;
+    swapchainCI.imageArrayLayers = layerCount;
+    swapchainCI.imageUsage = internal::textureUsageToVkImageUsageFlags(usage);
+    swapchainCI.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
+    swapchainCI.preTransform = VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR;
+    swapchainCI.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
+    swapchainCI.presentMode = presentModes[preferredPresentMode];
+    swapchainCI.clipped = VK_FALSE;
+    swapchainCI.oldSwapchain = nullptr;
+
+    VkSwapchainKHR vkSwapchain;
+    if (vkCreateSwapchainKHR(dev->vkDevice, &swapchainCI, nullptr, &vkSwapchain)) {
+        KOBALT_PRINT(DebugSeverity::Error, &dev->base.obj, "internal Vulkan error; failed to create swapchain");
+        return false;
+    }
+
+    swapchain = &(new wsi::Swapchain_t(dev, vkSwapchain))->base.obj;
+    return true;
 }
 
 } /* namespace internal */
@@ -910,6 +1206,9 @@ void setDebugName(Object_t* object, const char* name) {
     baseObj->debugName[std::min(len, 63u)] = '\0';
 }
 
+#define KOBALT_INTERNAL_DESTROY_OBJ_EXP(obj_, enum_, type_) case internal::ObjectType::enum_: delete reinterpret_cast<internal::type_##_t*>(obj_); break
+#define KOBALT_INTERNAL_DESTROY_OBJ(obj_, type_) case internal::ObjectType::##type_: delete reinterpret_cast<internal::##type_##_t*>(obj_); break
+
 void destroy(Object_t* object) {
     if (object == nullptr) {
         KOBALT_PRINT(DebugSeverity::Error, nullptr, "cannot destroy null object");
@@ -917,15 +1216,11 @@ void destroy(Object_t* object) {
     }
 
     switch (object->type) {
-        case internal::ObjectType::Device:
-            delete reinterpret_cast<internal::Device_t*>(object);
-            return;
-        case internal::ObjectType::Shader:
-            delete reinterpret_cast<internal::Shader_t*>(object);
-            return;
-        case internal::ObjectType::VertexInputState:
-            delete reinterpret_cast<internal::VertexInputState_t*>(object);
-            return;
+        KOBALT_INTERNAL_DESTROY_OBJ(object, Device);
+        KOBALT_INTERNAL_DESTROY_OBJ(object, Shader);
+        KOBALT_INTERNAL_DESTROY_OBJ(object, VertexInputState);
+        KOBALT_INTERNAL_DESTROY_OBJ(object, RasterizationState);
+        KOBALT_INTERNAL_DESTROY_OBJ_EXP(object, WSI_Swapchain, wsi::Swapchain);
         default:
             KOBALT_PRINT(DebugSeverity::Error, nullptr, "unknown object type to destroy");
             return;
@@ -1179,6 +1474,85 @@ bool createDevice(Device& device, uint32_t id, DeviceSupport support) {
     return true;
 }
 
+namespace wsi {
+
+#ifdef KOBALT_GLFW
+
+namespace glfw {
+
+bool createSwapchain(Swapchain& swapchain, Device device, GLFWwindow* window, uint32_t width, uint32_t height, uint32_t layerCount, TextureUsage usage, bool sRGBFormat, PresentMode presentMode) {
+    if (device == nullptr) {
+        KOBALT_PRINT(DebugSeverity::Error, nullptr, "device is null");
+        return false;
+    }
+
+    if (window == nullptr) {
+        KOBALT_PRINT(DebugSeverity::Error, nullptr, "window is null");
+        return false;
+    }
+
+    if (width == 0) {
+        KOBALT_PRINT(DebugSeverity::Error, nullptr, "width must not be 0");
+        return false;
+    }
+
+    if (height == 0) {
+        KOBALT_PRINT(DebugSeverity::Error, nullptr, "height must not be 0");
+        return false;
+    }
+
+    if (layerCount == 0) {
+        KOBALT_PRINT(DebugSeverity::Error, nullptr, "layerCount must not be 0");
+        return false;
+    }
+
+    if (internal::textureUsageToVkImageUsageFlags(usage) == 0) {
+        KOBALT_PRINTF(DebugSeverity::Error, nullptr, "usage has invalid value: %u", static_cast<uint32_t>(usage));
+        return false;
+    }
+
+    if ((presentMode & PresentMode::Any) != presentMode) {
+        KOBALT_PRINTF(DebugSeverity::Error, nullptr, "unknown combination of PresentMode options: %u", static_cast<uint32_t>(presentMode));
+        return false;
+    }
+
+    internal::Device_t* dev = reinterpret_cast<internal::Device_t*>(device);
+
+    internal::Surface const* surface = nullptr;
+    for (internal::Surface const& s : internal::surfaces) {
+        if (s.type == internal::SurfaceType::GLFW && s.window == window) {
+            surface = &s;
+            break;
+        }
+    }
+
+    if (surface == nullptr) {
+        VkSurfaceKHR vkSurface;
+        if (glfwCreateWindowSurface(internal::vkInstance, window, nullptr, &vkSurface) != VK_SUCCESS) {
+            KOBALT_PRINT(DebugSeverity::Error, nullptr, "internal Vulkan error; failed to create GLFW Vulkan surface");
+            return false;
+        }
+
+        internal::Surface s = {};
+        s.vkSurface = vkSurface;
+        s.type = internal::SurfaceType::GLFW;
+        s.window = reinterpret_cast<void*>(window);
+
+        vkGetPhysicalDeviceSurfaceCapabilitiesKHR(dev->vkPhysicalDevice, vkSurface, &s.vkCapabilities);
+
+        internal::surfaces.push_back(s);
+        surface = &internal::surfaces[internal::surfaces.size() - 1];
+    }
+
+    return internal::createSwapchainGeneric(swapchain, dev, *surface, width, height, layerCount, usage, sRGBFormat, presentMode);
+}
+
+} /* namespace glfw */
+
+#endif /* #ifdef KOBALT_GLFW */
+
+} /* namespace wsi */
+
 bool createShaderSPIRV(Shader& shader, Device device, uint32_t const* data, size_t size) {
     if (device == nullptr) {
         KOBALT_PRINT(DebugSeverity::Error, nullptr, "device is null");
@@ -1265,7 +1639,29 @@ bool createVertexInputState(VertexInputState& vertexInputState, Device device, T
 }
 
 bool createRasterizationState(RasterizationState& rasterizationState, Device device, FillMode fillMode, CullMode cullMode, FrontFace frontFace, float depthBias, float depthBiasClamp, float slopeScaledDepthBias) {
+    if (device == nullptr) {
+        KOBALT_PRINT(DebugSeverity::Error, nullptr, "device is null");
+        return false;
+    }
 
+    if (internal::fillModeToVkPolygonMode(fillMode) == VK_POLYGON_MODE_MAX_ENUM) {
+        KOBALT_PRINTF(DebugSeverity::Error, nullptr, "fillMode has invalid value: %u", static_cast<uint32_t>(fillMode));
+        return false;
+    }
+
+    if (internal::cullModeToVkCullModeFlags(cullMode) == 0 && cullMode != CullMode::None) {
+        KOBALT_PRINTF(DebugSeverity::Error, nullptr, "cullMode has invalid value: %u", static_cast<uint32_t>(cullMode));
+        return false;
+    }
+
+    if (internal::frontFaceToVkFrontFace(frontFace) == VK_FRONT_FACE_MAX_ENUM) {
+        KOBALT_PRINTF(DebugSeverity::Error, nullptr, "frontFace has invalid value: %u", static_cast<uint32_t>(frontFace));
+        return false;
+    }
+
+    internal::RasterizationState_t* rState = new internal::RasterizationState_t(device, fillMode, cullMode, frontFace, depthBias, depthBiasClamp, slopeScaledDepthBias);
+    rasterizationState = &rState->base.obj;
+    return true;
 }
 
 } /* namespace kobalt */

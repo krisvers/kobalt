@@ -76,12 +76,22 @@ int main() {
 
     kobalt::Device device;
     assert(kobalt::createDevice(device, 0, { false, true }));
+    kobalt::setDebugName(device, "Device");
+
+    int w, h;
+    glfwGetFramebufferSize(window, &w, &h);
+
+    kobalt::wsi::Swapchain swapchain;
+    assert(kobalt::wsi::glfw::createSwapchain(swapchain, device, window, w, h, 1, kobalt::TextureUsage::RenderTarget, false, kobalt::wsi::PresentMode::Any));
+    kobalt::setDebugName(swapchain, "Swapchain");
 
     kobalt::Shader vertexShader;
     assert(loadShader(vertexShader, device, "shader.vertex.spv"));
+    kobalt::setDebugName(vertexShader, "Vertex Shader");
 
     kobalt::Shader pixelShader;
     assert(loadShader(pixelShader, device, "shader.pixel.spv"));
+    kobalt::setDebugName(pixelShader, "Pixel Shader");
 
     kobalt::VertexAttribute attributes[2] = {
         { 0, 0, kobalt::VertexAttributeType::Float32, 3, 0 },
@@ -94,14 +104,51 @@ int main() {
 
     kobalt::VertexInputState vertexInputState;
     assert(kobalt::createVertexInputState(vertexInputState, device, kobalt::Topology::TriangleList, attributes, 2, bindings, 1));
+    kobalt::setDebugName(vertexInputState, "Vertex Input State");
+
+    kobalt::RasterizationState rasterizationState;
+    assert(kobalt::createRasterizationState(rasterizationState, device, kobalt::FillMode::Fill, kobalt::CullMode::None, kobalt::FrontFace::CounterClockwise, 0.0f, 0.0f, 0.0f));
+    kobalt::setDebugName(rasterizationState, "Rasterization State");
+
+    kobalt::RenderAttachment renderTargetAttachment = {};
+    renderTargetAttachment.format = kobalt::wsi::getSwapchainFormat(swapchain);
+    renderTargetAttachment.sampleCount = 1;
+    renderTargetAttachment.loadOp = kobalt::RenderAttachmentLoadOp::Clear;
+    renderTargetAttachment.storeOp = kobalt::RenderAttachmentStoreOp::Store;
+    renderTargetAttachment.stencilLoadOp = kobalt::RenderAttachmentLoadOp::DontCare;
+    renderTargetAttachment.stencilStoreOp = kobalt::RenderAttachmentStoreOp::DontCare;
+    renderTargetAttachment.initialLayout = kobalt::TextureLayout::RenderTarget;
+    renderTargetAttachment.finalLayout = kobalt::TextureLayout::PresentSrc;
+
+    kobalt::RenderAttachmentState renderAttachmentState;
+    assert(kobalt::createRenderAttachmentState(renderAttachmentState, device, &renderTargetAttachment, 1));
+
+    kobalt::RenderAttachmentReference renderTargetReference = {};
+    renderTargetReference.index = 0;
+    renderTargetReference.layout = kobalt::TextureLayout::RenderTarget;
+
+    kobalt::RenderSubpass renderSubpass;
+    assert(kobalt::createRenderSubpass(renderSubpass, device, nullptr, 0, &renderTargetReference, 1, nullptr));
+
+    kobalt::RenderPass renderPass;
+    assert(kobalt::createRenderPass(renderPass, device, &renderSubpass, 0, renderAttachmentState));
+
+    kobalt::GraphicsPipelineAttachment gpRenderTargetAttachment = {};
+    gpRenderTargetAttachment.format = renderTargetAttachment.format;
+    gpRenderTargetAttachment.sampleCount = renderTargetAttachment.sampleCount;
+
+    kobalt::Pipeline graphicsPipeline;
+    assert(kobalt::createGraphicsPipeline(graphicsPipeline, device, vertexInputState, rasterizationState, vertexShader, pixelShader, nullptr, nullptr, 0, &gpRenderTargetAttachment, 1, nullptr, 0));
 
     while (!glfwWindowShouldClose(window)) {
         glfwPollEvents();
     }
 
+    kobalt::destroy(rasterizationState);
     kobalt::destroy(vertexInputState);
     kobalt::destroy(vertexShader);
     kobalt::destroy(pixelShader);
+    kobalt::destroy(swapchain);
     kobalt::destroy(device);
     kobalt::deinit();
 

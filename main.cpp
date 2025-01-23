@@ -1,13 +1,13 @@
 #define GLFW_INCLUDE_NONE
 #include <GLFW/glfw3.h>
 
-#define KOBALT_IMPL
 #define KOBALT_GLFW
-#define KOBALT_DEFAULT_DEBUG_MESSENGER
 #include "kobalt.h"
 
 #include <cassert>
 #include <iostream>
+#include <vector>
+#include <fstream>
 
 void formatMemorySize(uint64_t& size, char& suffix, bool decimal) {
     char suffixes[] = { 'B', 'K', 'M', 'G', 'T' };
@@ -53,7 +53,7 @@ int main() {
         std::cout << adapterInfo.name << std::endl;
         std::cout << "    vendor: " << std::hex << static_cast<uint32_t>(adapterInfo.vendor) << std::dec << std::endl;
         std::cout << "    type: " << static_cast<uint32_t>(adapterInfo.type) << std::endl;
-        std::cout << "      dynamic render state: " << adapterInfo.support.dynamicRenderState << std::endl;
+        std::cout << "      dynamic render state: " << adapterInfo.support.dynamicRenderPass << std::endl;
         std::cout << "      swapchain: " << adapterInfo.support.swapchain << std::endl;
         std::cout << "    texture 1D: " << adapterInfo.maxTextureSize1D << std::endl;
         std::cout << "    texture 2D: " << adapterInfo.maxTextureSize2D << std::endl;
@@ -75,7 +75,7 @@ int main() {
     }
 
     kobalt::Device device;
-    assert(kobalt::createDevice(device, 0, { false, true }));
+    assert(kobalt::createDevice(device, 0, { true, true }));
     kobalt::setDebugName(device, "Device");
 
     int w, h;
@@ -85,6 +85,12 @@ int main() {
     assert(kobalt::wsi::glfw::createSwapchain(swapchain, device, window, w, h, 1, kobalt::TextureUsage::RenderTarget, false, kobalt::wsi::PresentMode::Any));
     kobalt::setDebugName(swapchain, "Swapchain");
 
+    kobalt::Texture backbuffer = kobalt::wsi::getSwapchainBackbuffer(swapchain);
+
+    kobalt::TextureView backbufferView;
+    assert(kobalt::createTextureView(backbufferView, device, backbuffer, kobalt::wsi::getSwapchainFormat(swapchain), kobalt::TextureDimensions::Texture2D, nullptr, nullptr));
+
+    /*
     kobalt::Shader vertexShader;
     assert(loadShader(vertexShader, device, "shader.vertex.spv"));
     kobalt::setDebugName(vertexShader, "Vertex Shader");
@@ -109,7 +115,9 @@ int main() {
     kobalt::RasterizationState rasterizationState;
     assert(kobalt::createRasterizationState(rasterizationState, device, kobalt::FillMode::Fill, kobalt::CullMode::None, kobalt::FrontFace::CounterClockwise, 0.0f, 0.0f, 0.0f));
     kobalt::setDebugName(rasterizationState, "Rasterization State");
+    */
 
+/* static render pass
     kobalt::RenderAttachment renderTargetAttachment = {};
     renderTargetAttachment.format = kobalt::wsi::getSwapchainFormat(swapchain);
     renderTargetAttachment.sampleCount = 1;
@@ -138,16 +146,82 @@ int main() {
     gpRenderTargetAttachment.sampleCount = renderTargetAttachment.sampleCount;
 
     kobalt::Pipeline graphicsPipeline;
-    assert(kobalt::createGraphicsPipeline(graphicsPipeline, device, vertexInputState, rasterizationState, vertexShader, pixelShader, nullptr, nullptr, 0, &gpRenderTargetAttachment, 1, nullptr, 0));
+    assert(kobalt::createGraphicsPipeline(graphicsPipeline, device, vertexInputState, rasterizationState, vertexShader, pixelShader, nullptr, nullptr, 0, &gpRenderTargetAttachment, 1, nullptr, 0, false, 0));
+*/
+
+    /*
+    kobalt::GraphicsPipelineAttachment gpRenderTargetAttachment = {};
+    gpRenderTargetAttachment.format = kobalt::wsi::getSwapchainFormat(swapchain);
+    gpRenderTargetAttachment.sampleCount = 1;
+
+    kobalt::Pipeline graphicsPipeline;
+    assert(kobalt::createGraphicsPipeline(graphicsPipeline, device, vertexInputState, rasterizationState, vertexShader, pixelShader, nullptr, nullptr, 0, &gpRenderTargetAttachment, 1, nullptr, 0, true, 0));
+    */
+
+    kobalt::CommandList commandList;
+    assert(kobalt::createCommandList(commandList, device, kobalt::QueueType::Graphics, false));
+    kobalt::setDebugName(commandList, "Command List");
+
+    kobalt::HostSync readyToRenderSync;
+    assert(kobalt::createHostSync(readyToRenderSync, device, true));
+    kobalt::setDebugName(readyToRenderSync, "Ready to Render Host Sync");
+
+    kobalt::QueueSync backbufferAvailableSync;
+    assert(kobalt::createQueueSync(backbufferAvailableSync, device));
+    kobalt::setDebugName(backbufferAvailableSync, "Backbuffer Available Queue Sync");
+
+    kobalt::QueueSync renderFinishedSync;
+    assert(kobalt::createQueueSync(renderFinishedSync, device));
+    kobalt::setDebugName(renderFinishedSync, "Render Finished Queue Sync");
 
     while (!glfwWindowShouldClose(window)) {
+        assert(kobalt::waitForHostSync(readyToRenderSync, UINT64_MAX));
+        assert(kobalt::resetHostSync(readyToRenderSync));
+
+        assert(kobalt::wsi::prepareNextSwapchainTexture(nullptr, swapchain, UINT64_MAX, backbufferAvailableSync, nullptr));
+
+        assert(kobalt::resetCommandList(commandList));
+        assert(kobalt::beginRecordingCommandList(commandList));
+
+        assert(kobalt::cmd::executionBarrier(commandList, kobalt::PipelineStage::Top, kobalt::PipelineStage::RenderTarget));
+        assert(kobalt::cmd::textureBarrier(commandList, kobalt::ResourceAccess::None, kobalt::ResourceAccess::RenderTargetWrite, kobalt::QueueTransfer::Identity, kobalt::QueueTransfer::Identity, kobalt::TextureLayout::Undefined, kobalt::TextureLayout::RenderTarget, backbuffer, nullptr));
+
+        kobalt::DynamicRenderAttachment rt = {};
+        rt.view = backbufferView;
+        rt.layout = kobalt::TextureLayout::RenderTarget;
+        rt.loadOp = kobalt::RenderAttachmentLoadOp::Clear;
+        rt.storeOp = kobalt::RenderAttachmentStoreOp::Store;
+        rt.clearValue.color.rgbaFloat[0] = 1.0f;
+        rt.clearValue.color.rgbaFloat[1] = 0.0f;
+        rt.clearValue.color.rgbaFloat[2] = 0.0f;
+        rt.clearValue.color.rgbaFloat[3] = 1.0f;
+
+        assert(kobalt::cmd::beginDynamicRenderPass(commandList, { 0, 0, static_cast<uint32_t>(w), static_cast<uint32_t>(h) }, 1, 0, &rt, 1, nullptr, nullptr));
+        assert(kobalt::cmd::endRenderPass(commandList));
+
+        kobalt::PipelineStage const finalStage = kobalt::PipelineStage::Bottom;
+        assert(kobalt::cmd::executionBarrier(commandList, kobalt::PipelineStage::RenderTarget, finalStage));
+        assert(kobalt::cmd::textureBarrier(commandList, kobalt::ResourceAccess::RenderTargetWrite, kobalt::ResourceAccess::MemoryRead, kobalt::QueueTransfer::Identity, kobalt::QueueTransfer::Identity, kobalt::TextureLayout::RenderTarget, kobalt::TextureLayout::PresentSrc, backbuffer, nullptr));
+        assert(kobalt::endRecordingCommandList(commandList));
+
+        assert(kobalt::executeCommandList(commandList, &backbufferAvailableSync, &finalStage, 1, &renderFinishedSync, 1, readyToRenderSync));
+        assert(kobalt::wsi::present(nullptr, swapchain, &renderFinishedSync, 1));
+
         glfwPollEvents();
     }
 
+    kobalt::destroy(renderFinishedSync);
+    kobalt::destroy(backbufferAvailableSync);
+    kobalt::destroy(readyToRenderSync);
+    kobalt::destroy(commandList);
+    /*
+    kobalt::destroy(graphicsPipeline);
     kobalt::destroy(rasterizationState);
     kobalt::destroy(vertexInputState);
     kobalt::destroy(vertexShader);
     kobalt::destroy(pixelShader);
+    */
+    kobalt::destroy(backbufferView);
     kobalt::destroy(swapchain);
     kobalt::destroy(device);
     kobalt::deinit();

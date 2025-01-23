@@ -2375,7 +2375,7 @@ void setDebugName(Object_t* object, const char* name) {
 }
 
 #define KOBALT_INTERNAL_DESTROY_OBJ_EXP(obj_, enum_, type_) case internal::ObjectType::enum_: delete reinterpret_cast<internal::type_##_t*>(obj_); break
-#define KOBALT_INTERNAL_DESTROY_OBJ(obj_, type_) case internal::ObjectType::##type_: delete reinterpret_cast<internal::##type_##_t*>(obj_); break
+#define KOBALT_INTERNAL_DESTROY_OBJ(obj_, type_) case internal::ObjectType::type_: delete reinterpret_cast<internal::type_##_t*>(obj_); break
 
 void destroy(Object_t* object) {
     if (object == nullptr) {
@@ -3826,7 +3826,7 @@ bool beginDynamicRenderPass(CommandList commandList, Rectangle renderArea, uint3
     if (depthTarget != nullptr) {
         internal::TextureView_t* view = reinterpret_cast<internal::TextureView_t*>(depthTarget->view);
         if ((internal::maximumTextureAspectFromTextureFormat(view->format) & TextureAspect::Depth) != TextureAspect::Depth) {
-            KOBALT_PRINTF(DebugSeverity::Error, &view->base.obj, "depthTarget->view does not support depth aspect");
+            KOBALT_PRINT(DebugSeverity::Error, &view->base.obj, "depthTarget->view does not support depth aspect");
             return false;
         }
 
@@ -3844,7 +3844,7 @@ bool beginDynamicRenderPass(CommandList commandList, Rectangle renderArea, uint3
     if (stencilTarget != nullptr) {
         internal::TextureView_t* view = reinterpret_cast<internal::TextureView_t*>(stencilTarget->view);
         if ((internal::maximumTextureAspectFromTextureFormat(view->format) & TextureAspect::Stencil) != TextureAspect::Stencil) {
-            KOBALT_PRINTF(DebugSeverity::Error, &view->base.obj, "stencilTarget->view does not support stencil aspect");
+            KOBALT_PRINT(DebugSeverity::Error, &view->base.obj, "stencilTarget->view does not support stencil aspect");
             return false;
         }
 

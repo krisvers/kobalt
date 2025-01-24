@@ -3018,6 +3018,23 @@ bool createRasterizationState(RasterizationState& rasterizationState, Device dev
     return true;
 }
 
+bool createGraphicsPipeline(Pipeline& pipeline, Device device, VertexInputState vertexInputState, RasterizationState rasterizationState, Shader vertexShader, Shader fragmentShader, Shader geometryShader, GraphicsPipelineAttachment const* inputAttachments, uint32_t inputAttachmentCount, GraphicsPipelineAttachment const* renderTargets, uint32_t renderTargetCount, GraphicsPipelineAttachment const* depthStencilTarget, uint32_t subpass, bool dynamicRenderPass, uint32_t viewMask) {
+    if (device == nullptr) {
+        KOBALT_PRINT(DebugSeverity::Error, nullptr, "device is null");
+        return false;
+    }
+    
+    if (vertexShader == nullptr) {
+        KOBALT_PRINT(DebugSeverity::Error, device, "vertexShader is null");
+        return false;
+    }
+    
+    if (fragmentShader == nullptr) {
+        KOBALT_PRINT(DebugSeverity::Error, device, "fragmentShader is null");
+        return false;
+    }
+}
+
 bool createTextureView(TextureView& view, Device device, Texture texture, TextureFormat format, TextureDimensions dimensions, ComponentMapping const* mapping, TextureSubresource const* subresource) {
     if (device == nullptr) {
         KOBALT_PRINT(DebugSeverity::Error, nullptr, "device is null");

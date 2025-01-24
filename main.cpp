@@ -90,7 +90,6 @@ int main() {
     kobalt::TextureView backbufferView;
     assert(kobalt::createTextureView(backbufferView, device, backbuffer, kobalt::wsi::getSwapchainFormat(swapchain), kobalt::TextureDimensions::Texture2D, nullptr, nullptr));
 
-    /*
     kobalt::Shader vertexShader;
     assert(loadShader(vertexShader, device, "shader.vertex.spv"));
     kobalt::setDebugName(vertexShader, "Vertex Shader");
@@ -115,7 +114,6 @@ int main() {
     kobalt::RasterizationState rasterizationState;
     assert(kobalt::createRasterizationState(rasterizationState, device, kobalt::FillMode::Fill, kobalt::CullMode::None, kobalt::FrontFace::CounterClockwise, 0.0f, 0.0f, 0.0f));
     kobalt::setDebugName(rasterizationState, "Rasterization State");
-    */
 
 /* static render pass
     kobalt::RenderAttachment renderTargetAttachment = {};
@@ -149,14 +147,12 @@ int main() {
     assert(kobalt::createGraphicsPipeline(graphicsPipeline, device, vertexInputState, rasterizationState, vertexShader, pixelShader, nullptr, nullptr, 0, &gpRenderTargetAttachment, 1, nullptr, 0, false, 0));
 */
 
-    /*
     kobalt::GraphicsPipelineAttachment gpRenderTargetAttachment = {};
     gpRenderTargetAttachment.format = kobalt::wsi::getSwapchainFormat(swapchain);
     gpRenderTargetAttachment.sampleCount = 1;
 
     kobalt::Pipeline graphicsPipeline;
     assert(kobalt::createGraphicsPipeline(graphicsPipeline, device, vertexInputState, rasterizationState, vertexShader, pixelShader, nullptr, nullptr, 0, &gpRenderTargetAttachment, 1, nullptr, 0, true, 0));
-    */
 
     kobalt::CommandList commandList;
     assert(kobalt::createCommandList(commandList, device, kobalt::QueueType::Graphics, false));
@@ -214,13 +210,11 @@ int main() {
     kobalt::destroy(backbufferAvailableSync);
     kobalt::destroy(readyToRenderSync);
     kobalt::destroy(commandList);
-    /*
     kobalt::destroy(graphicsPipeline);
     kobalt::destroy(rasterizationState);
     kobalt::destroy(vertexInputState);
     kobalt::destroy(vertexShader);
     kobalt::destroy(pixelShader);
-    */
     kobalt::destroy(backbufferView);
     kobalt::destroy(swapchain);
     kobalt::destroy(device);

@@ -73,6 +73,8 @@ KOBALT_HANDLE(Shader);
 KOBALT_HANDLE(VertexInputState);
 KOBALT_HANDLE(RasterizationState);
 KOBALT_HANDLE(RenderAttachmentState);
+KOBALT_HANDLE(DepthStencilState);
+KOBALT_HANDLE(BlendState);
 KOBALT_HANDLE(RenderSubpass);
 KOBALT_HANDLE(RenderPass);
 KOBALT_HANDLE(Framebuffer);
@@ -130,6 +132,10 @@ enum class VertexAttributeType {
     UInt64,
     SInt64,
     Double64,
+};
+
+enum class CompareOp {
+
 };
 
 enum class TextureFormat {
@@ -641,7 +647,7 @@ bool createShaderSPIRV(Shader& shader, Device device, uint32_t const* data, size
 bool createVertexInputState(VertexInputState& vertexInputState, Device device, Topology topology, VertexAttribute const* vertexAttributes, uint32_t vertexAttributeCount, VertexBinding const* vertexBindings, uint32_t vertexBindingCount);
 bool createRasterizationState(RasterizationState& rasterizationState, Device device, FillMode fillMode, CullMode cullMode, FrontFace frontFace, float depthBias, float depthBiasClamp, float slopeScaledDepthBias);
 
-bool createGraphicsPipeline(Pipeline& pipeline, Device device, VertexInputState vertexInputState, RasterizationState rasterizationState, Shader vertexShader, Shader fragmentShader, Shader geometryShader, GraphicsPipelineAttachment const* inputAttachments, uint32_t inputAttachmentCount, GraphicsPipelineAttachment const* renderTargets, uint32_t renderTargetCount, GraphicsPipelineAttachment const* depthStencilTarget, uint32_t subpass, bool dynamicRenderPass, uint32_t viewMask);
+bool createGraphicsPipeline(Pipeline& pipeline, Device device, VertexInputState vertexInputState, RasterizationState rasterizationState, DepthStencilState depthStencilState, BlendState blendState, Shader vertexShader, Shader fragmentShader, Shader geometryShader, GraphicsPipelineAttachment const* inputAttachments, uint32_t inputAttachmentCount, GraphicsPipelineAttachment const* renderTargets, uint32_t renderTargetCount, GraphicsPipelineAttachment const* depthStencilTarget, uint32_t subpass, bool dynamicRenderPass, uint32_t viewMask);
 bool storePipeline(Pipeline pipeline, void* data, uint64_t* size);
 bool loadPipeline(Pipeline& pipeline, void* data, uint64_t size);
 
@@ -3033,6 +3039,24 @@ bool createGraphicsPipeline(Pipeline& pipeline, Device device, VertexInputState 
         KOBALT_PRINT(DebugSeverity::Error, device, "fragmentShader is null");
         return false;
     }
+
+    VkPipelineVertexInputStateCreateInfo defaultVertexInputCI = {};
+    defaultVertexInputCI.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
+    defaultVertexInputCI.vertexBindingDescriptionCount = 0;
+    defaultVertexInputCI.pVertexBindingDescriptions = nullptr;
+    defaultVertexInputCI.vertexAttributeDescriptionCount = 0;
+    defaultVertexInputCI.pVertexAttributeDescriptions = nullptr;
+
+    VkPipelineInputAssemblyStateCreateInfo defaultInputAssemblyCI = {};
+    defaultInputAssemblyCI.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
+    defaultInputAssemblyCI.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+
+    VkPipelineRasterizationStateCreateInfo defaultRasterizationCI = {};
+    defaultRasterizationCI.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
+    defaultRasterizationCI.polygonMode = VK_POLYGON_MODE_FILL;
+    defaultRasterizationCI.cullMode = VK_CULL_MODE_NONE;
+    defaultRasterizationCI.frontFace = VK_FRONT_FACE_CLOCKWISE;
+    defaultRasterizationCI.lineWidth = 1.0f;
 }
 
 bool createTextureView(TextureView& view, Device device, Texture texture, TextureFormat format, TextureDimensions dimensions, ComponentMapping const* mapping, TextureSubresource const* subresource) {

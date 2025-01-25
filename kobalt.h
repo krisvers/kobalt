@@ -135,7 +135,76 @@ enum class VertexAttributeType {
 };
 
 enum class CompareOp {
+    Never,
+    Less,
+    LEqual,
+    Equal,
+    GEqual,
+    Greater,
+    Always,
+};
 
+enum class StencilOp {
+    Zero,
+    Keep,
+    Replace,
+    IncClamp,
+    DecClamp,
+    Invert,
+    IncWrap,
+    DecWrap,
+};
+
+enum class LogicOp {
+    NoOp,
+    Clear,
+    Set,
+    And,
+    RevAnd,
+    InvAnd,
+    Copy,
+    InvCopy,
+    Xor,
+    Or,
+    RevOr,
+    InvOr,
+    Nor,
+    XNor,
+    Not,
+    Nand,
+
+    /* aliases */
+    Equivalent = XNor,
+};
+
+enum class BlendOp {
+    Add,
+    Subtract,
+    RevSubtract,
+    Min,
+    Max,
+};
+
+enum class BlendFactor {
+    Zero,
+    One,
+    SrcColor,
+    InvSrcColor,
+    DstColor,
+    InvDstColor,
+    SrcAlpha,
+    InvSrcAlpha,
+    DstAlpha,
+    InvDstAlpha,
+    ConstColor,
+    InvConstColor,
+    ConstAlpha,
+    InvConstAlpha,
+    SrcAlphaSat,
+    Src1Color,
+    InvSrc1Color,
+    Src1Alpha,
+    InvSrc1Alpha,
 };
 
 enum class TextureFormat {

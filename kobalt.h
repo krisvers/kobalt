@@ -71,10 +71,12 @@ struct Object_t {
 KOBALT_HANDLE(Device);
 KOBALT_HANDLE(Shader);
 KOBALT_HANDLE(VertexInputState);
+KOBALT_HANDLE(TessellationState);
 KOBALT_HANDLE(RasterizationState);
-KOBALT_HANDLE(RenderAttachmentState);
 KOBALT_HANDLE(DepthStencilState);
+KOBALT_HANDLE(BlendAttachmentState);
 KOBALT_HANDLE(BlendState);
+KOBALT_HANDLE(RenderAttachmentState);
 KOBALT_HANDLE(RenderSubpass);
 KOBALT_HANDLE(RenderPass);
 KOBALT_HANDLE(Framebuffer);
@@ -370,6 +372,15 @@ enum class ComponentSwizzle {
     W = A,
 };
 
+enum class ColorComponent {
+    R = 0x1,
+    G = 0x2,
+    B = 0x4,
+    A = 0x8,
+};
+
+KOBALT_ENUM_BITMASK(ColorComponent);
+
 enum class TextureDimensions {
     Texture1D,
     Texture2D,
@@ -621,6 +632,24 @@ struct GraphicsPipelineRenderPassInfo {
     RenderPass renderPass;
 };
 
+struct PipelineShader {
+    Shader shader;
+    char const* name;
+};
+
+struct StencilOpState {
+    StencilOp failOp;
+    StencilOp passOp;
+    StencilOp depthFailOp;
+    CompareOp compareOp;
+    uint32_t compareMask;
+    uint32_t writeMask;
+};
+
+struct BlendConstants {
+    float rgba[4];
+};
+
 struct Rectangle {
     int32_t x;
     int32_t y;
@@ -714,9 +743,13 @@ bool createRenderPass(RenderPass& renderPass, Device device, RenderSubpass const
 /* pipeline */
 bool createShaderSPIRV(Shader& shader, Device device, uint32_t const* data, size_t size);
 bool createVertexInputState(VertexInputState& vertexInputState, Device device, Topology topology, VertexAttribute const* vertexAttributes, uint32_t vertexAttributeCount, VertexBinding const* vertexBindings, uint32_t vertexBindingCount);
+bool createTessellationState(TessellationState& tessellationState, Device device, uint32_t patchControlPoints);
 bool createRasterizationState(RasterizationState& rasterizationState, Device device, FillMode fillMode, CullMode cullMode, FrontFace frontFace, float depthBias, float depthBiasClamp, float slopeScaledDepthBias);
+bool createDepthStencilState(DepthStencilState& depthStencilState, Device device, bool testDepth, bool writeDepth, CompareOp depthCompareOp, bool testStencil, StencilOpState const* frontStencil, StencilOpState const* backStencil);
+bool createBlendAttachmentState(BlendAttachmentState& blendAttachmentState, Device device, bool blend, BlendFactor srcColorFactor, BlendFactor dstColorFactor, BlendOp colorBlendOp, BlendFactor srcAlphaFactor, BlendFactor dstAlphaFactor, BlendOp alphaBlendOp, ColorComponent colorWriteComponents);
+bool createBlendState(BlendState& blendState, Device device, BlendAttachmentState const* attachments, uint32_t attachmentCount, bool logicOpEnable, LogicOp logicOp, BlendConstants const* constants);
 
-bool createGraphicsPipeline(Pipeline& pipeline, Device device, VertexInputState vertexInputState, RasterizationState rasterizationState, DepthStencilState depthStencilState, BlendState blendState, Shader vertexShader, Shader fragmentShader, Shader geometryShader, GraphicsPipelineAttachment const* inputAttachments, uint32_t inputAttachmentCount, GraphicsPipelineAttachment const* renderTargets, uint32_t renderTargetCount, GraphicsPipelineAttachment const* depthStencilTarget, uint32_t subpass, bool dynamicRenderPass, uint32_t viewMask);
+bool createGraphicsPipeline(Pipeline& pipeline, Device device, VertexInputState vertexInputState, TessellationState tessellationState, RasterizationState rasterizationState, DepthStencilState depthStencilState, BlendState blendState, PipelineShader const* vertexShader, PipelineShader const* tessControlShader, PipelineShader const* tessEvalShader, PipelineShader const* geometryShader, PipelineShader const* fragmentShader, GraphicsPipelineAttachment const* inputAttachments, uint32_t inputAttachmentCount, GraphicsPipelineAttachment const* renderTargets, uint32_t renderTargetCount, GraphicsPipelineAttachment const* depthStencilTarget, uint32_t subpass, bool dynamicRenderPass, uint32_t viewMask);
 bool storePipeline(Pipeline pipeline, void* data, uint64_t* size);
 bool loadPipeline(Pipeline& pipeline, void* data, uint64_t size);
 
@@ -1802,6 +1835,20 @@ struct RasterizationState_t {
         createInfo.depthBiasClamp = depthBiasClamp;
         createInfo.depthBiasSlopeFactor = slopeScaledDepthBias;
         createInfo.lineWidth = 1.0f;
+    }
+};
+
+struct Pipeline_t {
+    ObjectBase_t base;
+
+    Device_t* device;
+    VkPipeline vkPipeline;
+
+    Pipeline_t(Device_t* device, VkPipeline vkPipeline) : base(&device->base.obj, ObjectType::Pipeline, vkPipeline), device(device), vkPipeline(vkPipeline) {}
+
+    ~Pipeline_t() {
+        vkDeviceWaitIdle(device->vkDevice);
+        vkDestroyPipeline(device->vkDevice, vkPipeline, nullptr);
     }
 };
 
@@ -3093,7 +3140,7 @@ bool createRasterizationState(RasterizationState& rasterizationState, Device dev
     return true;
 }
 
-bool createGraphicsPipeline(Pipeline& pipeline, Device device, VertexInputState vertexInputState, RasterizationState rasterizationState, Shader vertexShader, Shader fragmentShader, Shader geometryShader, GraphicsPipelineAttachment const* inputAttachments, uint32_t inputAttachmentCount, GraphicsPipelineAttachment const* renderTargets, uint32_t renderTargetCount, GraphicsPipelineAttachment const* depthStencilTarget, uint32_t subpass, bool dynamicRenderPass, uint32_t viewMask) {
+bool createGraphicsPipeline(Pipeline& pipeline, Device device, VertexInputState vertexInputState, TessellationState tessellationState, RasterizationState rasterizationState, DepthStencilState depthStencilState, BlendState blendState, PipelineShader const* vertexShader, PipelineShader const* tessControlShader, PipelineShader const* tessEvalShader, PipelineShader const* geometryShader, PipelineShader const* fragmentShader, GraphicsPipelineAttachment const* inputAttachments, uint32_t inputAttachmentCount, GraphicsPipelineAttachment const* renderTargets, uint32_t renderTargetCount, GraphicsPipelineAttachment const* depthStencilTarget, uint32_t subpass, bool dynamicRenderPass, uint32_t viewMask) {
     if (device == nullptr) {
         KOBALT_PRINT(DebugSeverity::Error, nullptr, "device is null");
         return false;
@@ -3103,10 +3150,73 @@ bool createGraphicsPipeline(Pipeline& pipeline, Device device, VertexInputState 
         KOBALT_PRINT(DebugSeverity::Error, device, "vertexShader is null");
         return false;
     }
+
+    if (vertexShader->shader == nullptr) {
+        KOBALT_PRINT(DebugSeverity::Error, device, "vertexShader->shader is null");
+        return false;
+    }
+
+    if (vertexShader->name == nullptr) {
+        KOBALT_PRINT(DebugSeverity::Error, device, "vertexShader->name is null");
+        return false;
+    }
     
     if (fragmentShader == nullptr) {
         KOBALT_PRINT(DebugSeverity::Error, device, "fragmentShader is null");
         return false;
+    }
+
+    if (fragmentShader->shader == nullptr) {
+        KOBALT_PRINT(DebugSeverity::Error, device, "fragmentShader->shader is null");
+        return false;
+    }
+
+    if (fragmentShader->name == nullptr) {
+        KOBALT_PRINT(DebugSeverity::Error, device, "fragmentShader->name is null");
+        return false;
+    }
+
+    internal::Shader_t* vertexShaderModule = reinterpret_cast<internal::Shader_t*>(vertexShader->shader);
+    internal::Shader_t* fragmentShaderModule = reinterpret_cast<internal::Shader_t*>(fragmentShader->shader);
+    internal::Shader_t* tessControlShaderModule = tessControlShader == nullptr ? nullptr : reinterpret_cast<internal::Shader_t*>(tessControlShader->shader);
+    internal::Shader_t* tessEvalShaderModule = tessEvalShader == nullptr ? nullptr : reinterpret_cast<internal::Shader_t*>(tessEvalShader->shader);
+    internal::Shader_t* geometryShaderModule = geometryShader == nullptr ? nullptr : reinterpret_cast<internal::Shader_t*>(geometryShader->shader);
+
+    std::vector<VkPipelineShaderStageCreateInfo> stages(2);
+    stages[0].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+    stages[0].stage = VK_SHADER_STAGE_VERTEX_BIT;
+    stages[0].module = vertexShaderModule->vkShaderModule;
+    stages[0].pName = vertexShader->name;
+    stages[1].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+    stages[1].stage = VK_SHADER_STAGE_FRAGMENT_BIT;
+    stages[1].module = fragmentShaderModule->vkShaderModule;
+    stages[1].pName = fragmentShader->name;
+
+    if (tessControlShader != nullptr) {
+        VkPipelineShaderStageCreateInfo tessControl = {};
+        tessControl.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+        tessControl.stage = VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT;
+        tessControl.module = tessControlShaderModule->vkShaderModule;
+        tessControl.pName = tessControlShader->name;
+        stages.push_back(tessControl);
+    }
+
+    if (tessEvalShader != nullptr) {
+        VkPipelineShaderStageCreateInfo tessEval = {};
+        tessEval.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+        tessEval.stage = VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT;
+        tessEval.module = tessEvalShaderModule->vkShaderModule;
+        tessEval.pName = tessEvalShader->name;
+        stages.push_back(tessEval);
+    }
+
+    if (geometryShader != nullptr) {
+        VkPipelineShaderStageCreateInfo geom = {};
+        geom.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+        geom.stage = VK_SHADER_STAGE_GEOMETRY_BIT;
+        geom.module = geometryShaderModule->vkShaderModule;
+        geom.pName = geometryShader->name;
+        stages.push_back(geom);
     }
 
     VkPipelineVertexInputStateCreateInfo defaultVertexInputCI = {};
@@ -3126,6 +3236,103 @@ bool createGraphicsPipeline(Pipeline& pipeline, Device device, VertexInputState 
     defaultRasterizationCI.cullMode = VK_CULL_MODE_NONE;
     defaultRasterizationCI.frontFace = VK_FRONT_FACE_CLOCKWISE;
     defaultRasterizationCI.lineWidth = 1.0f;
+
+    VkDynamicState dynamics[] = {
+        VK_DYNAMIC_STATE_VIEWPORT,
+        VK_DYNAMIC_STATE_SCISSOR,
+    };
+
+    VkPipelineDynamicStateCreateInfo dynamicCI = {};
+    dynamicCI.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
+    dynamicCI.dynamicStateCount = sizeof(dynamics) / sizeof(*dynamics);
+    dynamicCI.pDynamicStates = dynamics;
+
+    internal::VertexInputState_t* internalVertexInputState = reinterpret_cast<internal::VertexInputState_t*>(vertexInputState);
+    /* TODO: internal::TessellationState_t* internalTessellationState = reinterpret_cast<internal::TessellationState_t*>(tessellationState); */
+    internal::RasterizationState_t* internalRasterizationState = reinterpret_cast<internal::RasterizationState_t*>(rasterizationState);
+    /* TODO: internal::DepthStencilState_t* internalDepthStencilState = reinterpret_cast<internal::DepthStencilState_t*>(depthStencilState); */
+    /* TODO: internal::BlendState_t* internalBlendState = reinterpret_cast<internal::BlendState_t*>(blendState); */
+
+    VkFormat* pRtFormats = nullptr;
+    std::vector<VkFormat> rtFormats(renderTargetCount);
+    if (renderTargets != nullptr) {
+        for (uint32_t i = 0; i < renderTargetCount; ++i) {
+            if (internal::textureFormatToVkFormat(renderTargets[i].format) == VK_FORMAT_MAX_ENUM) {
+                KOBALT_PRINTF(DebugSeverity::Error, device, "renderTargets[%u].format has invalid value: %u", i, static_cast<uint32_t>(renderTargets[i].format));
+                return false;
+            }
+
+            TextureAspect aspect = internal::maximumTextureAspectFromTextureFormat(renderTargets[i].format);
+            if ((aspect & TextureAspect::Color) != TextureAspect::Color) {
+                KOBALT_PRINTF(DebugSeverity::Error, device, "renderTargets[%u].format does not support color: %u", i, static_cast<uint32_t>(renderTargets[i].format));
+                return false;
+            }
+
+            rtFormats[i] = internal::textureFormatToVkFormat(renderTargets[i].format);
+        }
+
+        pRtFormats = rtFormats.data();
+    }
+
+    VkPipelineRenderingCreateInfoKHR renderingCI = {};
+    renderingCI.sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO_KHR;
+    renderingCI.viewMask = viewMask;
+    renderingCI.colorAttachmentCount = pRtFormats != nullptr ? renderTargetCount : 0;
+    renderingCI.pColorAttachmentFormats = pRtFormats;
+    renderingCI.depthAttachmentFormat = VK_FORMAT_UNDEFINED;
+    renderingCI.stencilAttachmentFormat = VK_FORMAT_UNDEFINED;
+
+    if (depthStencilTarget != nullptr) {
+        if (internal::textureFormatToVkFormat(depthStencilTarget->format) == VK_FORMAT_MAX_ENUM) {
+            KOBALT_PRINTF(DebugSeverity::Error, device, "depthStencilTarget->format has invalid value: %u", static_cast<uint32_t>(depthStencilTarget->format));
+            return false;
+        }
+
+        TextureAspect aspect = internal::maximumTextureAspectFromTextureFormat(depthStencilTarget->format);
+        if ((aspect & (TextureAspect::Depth | TextureAspect::Stencil)) == static_cast<TextureAspect>(0)) {
+            KOBALT_PRINTF(DebugSeverity::Error, device, "depthStencilTarget->format does not support depth or stencil: %u", static_cast<uint32_t>(depthStencilTarget->format));
+            return false;
+        }
+
+        if ((aspect & TextureAspect::Depth) == TextureAspect::Depth) {
+            renderingCI.depthAttachmentFormat = internal::textureFormatToVkFormat(depthStencilTarget->format);
+        }
+
+        if ((aspect & TextureAspect::Stencil) == TextureAspect::Stencil) {
+            renderingCI.stencilAttachmentFormat = internal::textureFormatToVkFormat(depthStencilTarget->format);
+        }
+    }
+
+    VkGraphicsPipelineCreateInfo graphicsPipelineCI = {};
+    graphicsPipelineCI.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
+    graphicsPipelineCI.pNext = dynamicRenderPass ? &renderingCI : nullptr;
+    graphicsPipelineCI.stageCount = static_cast<uint32_t>(stages.size());
+    graphicsPipelineCI.pStages = stages.data();
+    graphicsPipelineCI.pVertexInputState = internalVertexInputState == nullptr ? &defaultVertexInputCI : &internalVertexInputState->vertexInputCI;
+    graphicsPipelineCI.pInputAssemblyState = internalVertexInputState == nullptr ? &defaultInputAssemblyCI : &internalVertexInputState->inputAssemblyCI;
+    graphicsPipelineCI.pTessellationState = /* TODO: */ nullptr;
+    graphicsPipelineCI.pViewportState = nullptr;
+    graphicsPipelineCI.pRasterizationState = internalRasterizationState == nullptr ? &defaultRasterizationCI : &internalRasterizationState->createInfo;
+    graphicsPipelineCI.pMultisampleState = /* TODO: */ nullptr;
+    graphicsPipelineCI.pDepthStencilState = /* TODO: */ nullptr;
+    graphicsPipelineCI.pColorBlendState = /* TODO: */ nullptr;
+    graphicsPipelineCI.pDynamicState = &dynamicCI;
+    graphicsPipelineCI.layout = /* TODO: */ nullptr;
+    graphicsPipelineCI.renderPass = /* TODO: */ nullptr;
+    graphicsPipelineCI.subpass = subpass;
+    graphicsPipelineCI.basePipelineHandle = nullptr;
+    graphicsPipelineCI.basePipelineIndex = 0;
+
+    internal::Device_t* dev = reinterpret_cast<internal::Device_t*>(device);
+
+    VkPipeline vkPipeline;
+    if (vkCreateGraphicsPipelines(dev->vkDevice, nullptr, 1, &graphicsPipelineCI, nullptr, &vkPipeline) != VK_SUCCESS) {
+        KOBALT_PRINT(DebugSeverity::Error, device, "internal Vulkan error; failed to create graphics pipeline");
+        return false;
+    }
+
+    pipeline = &(new internal::Pipeline_t(dev, vkPipeline))->base.obj;
+    return true;
 }
 
 bool createTextureView(TextureView& view, Device device, Texture texture, TextureFormat format, TextureDimensions dimensions, ComponentMapping const* mapping, TextureSubresource const* subresource) {

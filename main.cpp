@@ -1,7 +1,9 @@
 #define GLFW_INCLUDE_NONE
 #include <GLFW/glfw3.h>
 
+#define KOBALT_IMPL
 #define KOBALT_GLFW
+#define KOBALT_DEFAULT_DEBUG_MESSENGER
 #include "kobalt.h"
 
 #include <cassert>
@@ -151,8 +153,16 @@ int main() {
     gpRenderTargetAttachment.format = kobalt::wsi::getSwapchainFormat(swapchain);
     gpRenderTargetAttachment.sampleCount = 1;
 
+    kobalt::PipelineShader pipelineVS = {};
+    pipelineVS.shader = vertexShader;
+    pipelineVS.name = "vsmain";
+
+    kobalt::PipelineShader pipelinePS = {};
+    pipelinePS.shader = pixelShader;
+    pipelinePS.name = "psmain";
+
     kobalt::Pipeline graphicsPipeline;
-    assert(kobalt::createGraphicsPipeline(graphicsPipeline, device, vertexInputState, rasterizationState, vertexShader, pixelShader, nullptr, nullptr, 0, &gpRenderTargetAttachment, 1, nullptr, 0, true, 0));
+    assert(kobalt::createGraphicsPipeline(graphicsPipeline, device, vertexInputState, nullptr, rasterizationState, nullptr, nullptr, &pipelineVS, nullptr, nullptr, nullptr, &pipelinePS, nullptr, 0, &gpRenderTargetAttachment, 1, nullptr, 0, true, 0));
 
     kobalt::CommandList commandList;
     assert(kobalt::createCommandList(commandList, device, kobalt::QueueType::Graphics, false));

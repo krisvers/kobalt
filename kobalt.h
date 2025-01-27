@@ -1825,7 +1825,7 @@ struct RasterizationState_t {
     VkPipelineRasterizationStateCreateInfo createInfo = {};
 
     RasterizationState_t(Device device, FillMode fillMode, CullMode cullMode, FrontFace frontFace, float depthBias, float depthBiasClamp, float slopeScaledDepthBias) : base(device, ObjectType::RasterizationState, nullptr) {
-        createInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_RASTERIZATION_ORDER_AMD;
+        createInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
         createInfo.depthClampEnable = depthBiasClamp != 0.0f;
         createInfo.polygonMode = internal::fillModeToVkPolygonMode(fillMode);
         createInfo.cullMode = internal::cullModeToVkCullModeFlags(cullMode);
@@ -3230,12 +3230,33 @@ bool createGraphicsPipeline(Pipeline& pipeline, Device device, VertexInputState 
     defaultInputAssemblyCI.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
     defaultInputAssemblyCI.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
 
+    VkPipelineViewportStateCreateInfo viewportCI = {};
+    viewportCI.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
+    viewportCI.viewportCount = 1;
+    viewportCI.pViewports = nullptr;
+    viewportCI.scissorCount = 1;
+    viewportCI.pScissors = nullptr;
+
     VkPipelineRasterizationStateCreateInfo defaultRasterizationCI = {};
     defaultRasterizationCI.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
     defaultRasterizationCI.polygonMode = VK_POLYGON_MODE_FILL;
     defaultRasterizationCI.cullMode = VK_CULL_MODE_NONE;
     defaultRasterizationCI.frontFace = VK_FRONT_FACE_CLOCKWISE;
     defaultRasterizationCI.lineWidth = 1.0f;
+
+    std::vector<VkPipelineColorBlendAttachmentState> blendAttachments(renderTargetCount);
+    if (blendState == nullptr) {
+        if (renderTargets != nullptr) {
+            for (uint32_t i = 0; i < renderTargetCount; ++i) {
+                blendAttachments[i].blendEnable = false;
+            }
+        }
+    }
+
+    VkPipelineColorBlendStateCreateInfo defaultBlendCI = {};
+    defaultBlendCI.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
+    defaultBlendCI.attachmentCount = renderTargetCount;
+    defaultBlendCI.pAttachments = blendAttachments.data();
 
     VkDynamicState dynamics[] = {
         VK_DYNAMIC_STATE_VIEWPORT,
@@ -3311,11 +3332,11 @@ bool createGraphicsPipeline(Pipeline& pipeline, Device device, VertexInputState 
     graphicsPipelineCI.pVertexInputState = internalVertexInputState == nullptr ? &defaultVertexInputCI : &internalVertexInputState->vertexInputCI;
     graphicsPipelineCI.pInputAssemblyState = internalVertexInputState == nullptr ? &defaultInputAssemblyCI : &internalVertexInputState->inputAssemblyCI;
     graphicsPipelineCI.pTessellationState = /* TODO: */ nullptr;
-    graphicsPipelineCI.pViewportState = nullptr;
+    graphicsPipelineCI.pViewportState = &viewportCI;
     graphicsPipelineCI.pRasterizationState = internalRasterizationState == nullptr ? &defaultRasterizationCI : &internalRasterizationState->createInfo;
     graphicsPipelineCI.pMultisampleState = /* TODO: */ nullptr;
     graphicsPipelineCI.pDepthStencilState = /* TODO: */ nullptr;
-    graphicsPipelineCI.pColorBlendState = /* TODO: */ nullptr;
+    graphicsPipelineCI.pColorBlendState = /* TODO: */ &defaultBlendCI;
     graphicsPipelineCI.pDynamicState = &dynamicCI;
     graphicsPipelineCI.layout = /* TODO: */ nullptr;
     graphicsPipelineCI.renderPass = /* TODO: */ nullptr;

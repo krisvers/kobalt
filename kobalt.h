@@ -69,22 +69,37 @@ struct Object_t {
 };
 
 KOBALT_HANDLE(Device);
-KOBALT_HANDLE(Shader);
+
+/* fixed pipeline state */
 KOBALT_HANDLE(VertexInputState);
 KOBALT_HANDLE(TessellationState);
 KOBALT_HANDLE(RasterizationState);
 KOBALT_HANDLE(DepthStencilState);
 KOBALT_HANDLE(BlendAttachmentState);
 KOBALT_HANDLE(BlendState);
+
+/* render passes */
 KOBALT_HANDLE(RenderAttachmentState);
 KOBALT_HANDLE(RenderSubpass);
 KOBALT_HANDLE(RenderPass);
 KOBALT_HANDLE(Framebuffer);
+
+/* pipeline resources */
+KOBALT_HANDLE(PipelineResourcePool);
+KOBALT_HANDLE(PipelineResourceLayout);
+KOBALT_HANDLE(PipelineResourceSet);
+
+KOBALT_HANDLE(Shader);
 KOBALT_HANDLE(Pipeline);
+
+/* resources */
 KOBALT_HANDLE(Buffer);
 KOBALT_HANDLE(BufferView);
 KOBALT_HANDLE(Texture);
 KOBALT_HANDLE(TextureView);
+KOBALT_HANDLE(Sampler);
+
+/* command list and sync */
 KOBALT_HANDLE(CommandList);
 KOBALT_HANDLE(QueueSync);
 KOBALT_HANDLE(HostSync);
@@ -471,6 +486,38 @@ enum class RenderAttachmentStoreOp {
     Store,
 };
 
+enum class ShaderStage {
+    Vertex = 0x1,
+    TessellationControl = 0x2,
+    TessellationEvaluation = 0x4,
+    Geometry = 0x8,
+    Fragment = 0x10,
+    Compute = 0x20,
+
+    /* aliases */
+    TessControl = TessellationControl,
+    TessEval = TessellationEvaluation,
+    Pixel = Fragment,
+};
+
+enum class PipelineResourceType {
+    Buffer,
+    DynamicBuffer,
+    TexelBuffer,
+    Texture,
+    Sampler,
+    TextureAndSampler,
+    InputAttachment,
+};
+
+enum class PipelineResourceAccess {
+    Storage,
+    Sampled,
+
+    /* Alias */
+    Uniform = Sampled,
+};
+
 enum class PipelineStage {
     Top = 0x1,
     DrawIndirect = 0x2,
@@ -512,6 +559,7 @@ KOBALT_ENUM_BITMASK(PipelineStage);
 struct DeviceSupport {
     bool dynamicRenderPass;
     bool swapchain;
+    bool dynamicPipelineResources;
 };
 
 inline bool operator==(DeviceSupport const& a, DeviceSupport const& b) {
@@ -637,6 +685,53 @@ struct PipelineShader {
     char const* name;
 };
 
+struct PipelineResourceBinding {
+    uint32_t binding;
+    PipelineResourceType type;
+    PipelineResourceAccess access;
+    uint32_t arrayLength;
+};
+
+struct PipelinePushConstantRange {
+    ShaderStage stages;
+    uint32_t offset;
+    uint32_t size;
+};
+
+struct PipelineResourceTexture {
+    uint32_t binding;
+    uint32_t elementBase;
+    uint32_t elementCount;
+    
+    Sampler sampler;
+    TextureView view;
+    TextureLayout layout;
+};
+
+struct PipelineResourceBuffer {
+    uint32_t binding;
+    uint32_t elementBase;
+    uint32_t elementCount;
+
+    Buffer buffer;
+    uint64_t offset;
+    uint64_t range;
+};
+
+struct PipelineResourceTexelBuffer {
+    uint32_t binding;
+    uint32_t elementBase;
+    uint32_t elementCount;
+
+    BufferView view;
+};
+
+struct PipelineResourceAllocationLimit {
+    PipelineResourceType type;
+    PipelineResourceAccess access;
+    uint32_t count;
+};
+
 struct StencilOpState {
     StencilOp failOp;
     StencilOp passOp;
@@ -749,7 +844,14 @@ bool createDepthStencilState(DepthStencilState& depthStencilState, Device device
 bool createBlendAttachmentState(BlendAttachmentState& blendAttachmentState, Device device, bool blend, BlendFactor srcColorFactor, BlendFactor dstColorFactor, BlendOp colorBlendOp, BlendFactor srcAlphaFactor, BlendFactor dstAlphaFactor, BlendOp alphaBlendOp, ColorComponent colorWriteComponents);
 bool createBlendState(BlendState& blendState, Device device, BlendAttachmentState const* attachments, uint32_t attachmentCount, bool logicOpEnable, LogicOp logicOp, BlendConstants const* constants);
 
-bool createGraphicsPipeline(Pipeline& pipeline, Device device, VertexInputState vertexInputState, TessellationState tessellationState, RasterizationState rasterizationState, DepthStencilState depthStencilState, BlendState blendState, PipelineShader const* vertexShader, PipelineShader const* tessControlShader, PipelineShader const* tessEvalShader, PipelineShader const* geometryShader, PipelineShader const* fragmentShader, GraphicsPipelineAttachment const* inputAttachments, uint32_t inputAttachmentCount, GraphicsPipelineAttachment const* renderTargets, uint32_t renderTargetCount, GraphicsPipelineAttachment const* depthStencilTarget, uint32_t subpass, bool dynamicRenderPass, uint32_t viewMask);
+/* pipeline resources */
+bool createPipelineResourceLayout(PipelineResourceLayout& layout, PipelineResourceBinding const* bindings, uint32_t bindingCount, PipelinePushConstantRange const* pushConstantRanges, uint32_t pushConstantCount);
+bool createPipelineResourcePool(PipelineResourcePool& pool, uint32_t maxSets, PipelineResourceAllocationLimit const* resourceLimits, uint32_t resourceLimitCount, bool dynamicUpdate);
+bool allocatePipelineResourceSet(PipelineResourceSet& set, PipelineResourceLayout layout, PipelineResourcePool pool);
+bool allocatePipelineResourceSets(PipelineResourceSet* sets, PipelineResourceLayout const* layouts, uint32_t setCount, PipelineResourcePool pool);
+bool updatePipelineResourceSet(PipelineResourceSet set, PipelineResourceTexture const* textures, uint32_t textureCount, PipelineResourceBuffer const* buffers, uint32_t bufferCount, PipelineResourceTexelBuffer const* texelBuffers, uint32_t texelBufferCount);
+
+bool createGraphicsPipeline(Pipeline& pipeline, Device device, VertexInputState vertexInputState, TessellationState tessellationState, RasterizationState rasterizationState, DepthStencilState depthStencilState, BlendState blendState, PipelineShader const* vertexShader, PipelineShader const* tessControlShader, PipelineShader const* tessEvalShader, PipelineShader const* geometryShader, PipelineShader const* fragmentShader, PipelineResourceLayout layout, GraphicsPipelineAttachment const* inputAttachments, uint32_t inputAttachmentCount, GraphicsPipelineAttachment const* renderTargets, uint32_t renderTargetCount, GraphicsPipelineAttachment const* depthStencilTarget, uint32_t subpass, bool dynamicRenderPass, uint32_t viewMask);
 bool storePipeline(Pipeline pipeline, void* data, uint64_t* size);
 bool loadPipeline(Pipeline& pipeline, void* data, uint64_t size);
 
@@ -808,6 +910,10 @@ bool beginRenderPass(CommandList commandList, RenderPass renderPass, Framebuffer
 bool beginDynamicRenderPass(CommandList commandList, Rectangle renderArea, uint32_t layerCount, uint32_t viewMask, DynamicRenderAttachment const* renderTargets, uint32_t renderTargetCount, DynamicRenderAttachment const* depthTarget, DynamicRenderAttachment const* stencilTarget);
 bool nextSubpass(CommandList commandList, bool secondaryCommandList);
 bool endRenderPass(CommandList commandList);
+
+/* pipeline */
+bool pushConstants(CommandList commandList, ShaderStage stages, uint32_t offset, uint32_t size, void const* values);
+bool pushDynamicPipelineResources(CommandList commandList, uint32_t set, PipelineResourceTexture const* textures, uint32_t textureCount, PipelineResourceBuffer const* buffers, uint32_t bufferCount, PipelineResourceTexelBuffer const* texelBuffers, uint32_t texelBufferCount);
 
 /* drawing */
 bool draw(CommandList commandList, uint32_t vertex, uint32_t count);

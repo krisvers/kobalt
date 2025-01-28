@@ -557,17 +557,18 @@ enum class PipelineStage {
 KOBALT_ENUM_BITMASK(PipelineStage);
 
 struct DeviceSupport {
-    bool dynamicRenderPass;
     bool swapchain;
+    bool flipViewport;
+    bool dynamicRenderPass;
     bool dynamicPipelineResources;
 };
 
 inline bool operator==(DeviceSupport const& a, DeviceSupport const& b) {
-    return (a.dynamicRenderPass == b.dynamicRenderPass && a.swapchain == b.swapchain);
+    return (a.swapchain == b.swapchain && a.flipViewport == b.flipViewport && a.dynamicRenderPass == b.dynamicRenderPass && a.dynamicPipelineResources == b.dynamicPipelineResources);
 }
 
 inline bool operator<(DeviceSupport const& a, DeviceSupport const& b) {
-    return (a.dynamicRenderPass < b.dynamicRenderPass && a.swapchain < b.swapchain);
+    return (a.swapchain < b.swapchain && a.flipViewport < b.flipViewport && a.dynamicRenderPass < b.dynamicRenderPass && a.dynamicPipelineResources < b.dynamicPipelineResources);
 }
 
 inline bool operator<=(DeviceSupport const& a, DeviceSupport const& b) {
@@ -859,11 +860,12 @@ bool loadPipeline(Pipeline& pipeline, void* data, uint64_t size);
 bool createBuffer(Buffer& buffer, Device device, uint64_t size, MemoryLocation location, BufferUsage usage);
 bool uploadBufferData(Buffer buffer, uint64_t offset, void const* data, uint64_t size);
 bool downloadBufferData(Buffer buffer, uint64_t offset, void* data, uint64_t size);
+bool copyBuffer(Buffer srcBuffer, uint64_t srcOffset, Buffer dstBuffer, uint64_t dstOffset, uint64_t size, HostSync signalHostSync, QueueSync const* signalQueueSyncs, uint32_t signalQueueSyncCount);
 bool mapBuffer(void*& mappedPointer, Buffer buffer, uint64_t offset, uint64_t size);
 void unmapBuffer(Buffer buffer, void* pointer);
 
 bool createTexture(Texture& texture, Device device, TextureDimensions dimensions, uint32_t width, uint32_t height, uint32_t depth, uint32_t layerCount, uint32_t mipCount, uint32_t samples, TextureFormat format, MemoryLocation location, TextureUsage usage);
-bool createTextureView(TextureView& view, Device device, Texture texture, TextureFormat format, TextureDimensions dimensions, ComponentMapping const* mapping, TextureSubresource const* subresource);
+bool createTextureView(TextureView& view, Texture texture, TextureFormat format, TextureDimensions dimensions, ComponentMapping const* mapping, TextureSubresource const* subresource);
 
 /* command list */
 bool createCommandList(CommandList& commandList, Device device, QueueType queueType, bool isSecondary);
@@ -911,9 +913,14 @@ bool beginDynamicRenderPass(CommandList commandList, Rectangle renderArea, uint3
 bool nextSubpass(CommandList commandList, bool secondaryCommandList);
 bool endRenderPass(CommandList commandList);
 
+/* transfers */
+bool copyBuffer(CommandList commandList, Buffer srcBuffer, uint64_t srcOffset, Buffer dstBuffer, uint64_t dstOffset, uint64_t size);
+
 /* pipeline */
 bool pushConstants(CommandList commandList, ShaderStage stages, uint32_t offset, uint32_t size, void const* values);
 bool pushDynamicPipelineResources(CommandList commandList, uint32_t set, PipelineResourceTexture const* textures, uint32_t textureCount, PipelineResourceBuffer const* buffers, uint32_t bufferCount, PipelineResourceTexelBuffer const* texelBuffers, uint32_t texelBufferCount);
+bool setViewport(CommandList commandList, float x, float y, float width, float height, float nearDepth, float farDepth);
+bool setScissor(CommandList commandList, uint32_t x, uint32_t y, uint32_t width, uint32_t height);
 
 /* drawing */
 bool draw(CommandList commandList, uint32_t vertex, uint32_t count);
@@ -1210,6 +1217,49 @@ inline VkFormat vertexAttributeTypeToVkFormat(VertexAttributeType type, uint32_t
     }
 
     return VK_FORMAT_MAX_ENUM;
+}
+
+inline VkMemoryPropertyFlags memoryLocationToVkMemoryPropertyFlags(MemoryLocation location) {
+    switch (location) {
+        case MemoryLocation::DeviceLocal:   return VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
+        case MemoryLocation::HostLocal:     return VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
+        default: break;
+    }
+
+    return VK_MEMORY_PROPERTY_FLAG_BITS_MAX_ENUM;
+}
+
+inline VkBufferUsageFlags bufferUsageToVkBufferUsageFlags(BufferUsage usage) {
+    VkBufferUsageFlags flags = 0;
+    if ((usage & BufferUsage::VertexBuffer) == BufferUsage::VertexBuffer) {
+        flags |= VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
+    }
+
+    if ((usage & BufferUsage::IndexBuffer) == BufferUsage::IndexBuffer) {
+        flags |= VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
+    }
+    
+    if ((usage & BufferUsage::StorageBuffer) == BufferUsage::StorageBuffer) {
+        flags |= VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
+    }
+
+    if ((usage & BufferUsage::UniformBuffer) == BufferUsage::UniformBuffer) {
+        flags |= VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
+    }
+
+    if ((usage & BufferUsage::TransferSrc) == BufferUsage::TransferSrc) {
+        flags |= VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+    }
+
+    if ((usage & BufferUsage::TransferDst) == BufferUsage::TransferDst) {
+        flags |= VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+    }
+
+    if (flags == 0) {
+        return VK_BUFFER_USAGE_FLAG_BITS_MAX_ENUM;
+    }
+
+    return flags;
 }
 
 inline VkImageLayout textureLayoutToVkImageLayout(TextureLayout layout) {
@@ -1785,7 +1835,10 @@ struct Device_t {
     DeviceSymbols symbols;
     DeviceQueues queues;
 
-    Device_t(VkDevice vkDev, VkPhysicalDevice vkPhys, DeviceSupport const& support, ExtraDeviceFeatures const& extra, DeviceQueues const& qs) : base(nullptr, ObjectType::Device, vkDev), vkDevice(vkDev), vkPhysicalDevice(vkPhys), enabledSupport(support), extraFeatures(extra), queues(qs) {
+    VkCommandPool vkTransferCommandPool;
+    VkCommandBuffer vkTransferCommandBuffer;
+
+    Device_t(VkDevice vkDev, VkPhysicalDevice vkPhys, DeviceSupport const& support, ExtraDeviceFeatures const& extra, DeviceQueues const& qs, VkCommandPool vkTransferCommandPool, VkCommandBuffer vkTransferCommandBuffer) : base(nullptr, ObjectType::Device, vkDev), vkDevice(vkDev), vkPhysicalDevice(vkPhys), enabledSupport(support), extraFeatures(extra), queues(qs), vkTransferCommandPool(vkTransferCommandPool), vkTransferCommandBuffer(vkTransferCommandBuffer) {
         vkGetDeviceQueue(vkDev, queues.graphicsFamily, 0, &queues.graphics);
         vkGetDeviceQueue(vkDev, queues.computeFamily, 0, &queues.compute);
         vkGetDeviceQueue(vkDev, queues.transferFamily, 0, &queues.transfer);
@@ -1797,6 +1850,7 @@ struct Device_t {
 
     ~Device_t() {
         vkDeviceWaitIdle(vkDevice);
+        vkDestroyCommandPool(vkDevice, vkTransferCommandPool, nullptr);
         vkDestroyDevice(vkDevice, nullptr);
     }
 };
@@ -1863,9 +1917,11 @@ struct Buffer_t {
     Device_t* device;
     VkBuffer vkBuffer;
     VkDeviceMemory vkMemory;
+    MemoryLocation location;
+    BufferUsage usage;
     uint64_t size;
 
-    Buffer_t(Device_t* device, VkBuffer vkBuffer, VkDeviceMemory vkMemory) : base(&device->base.obj, internal::ObjectType::Buffer, vkBuffer), device(device), vkBuffer(vkBuffer), vkMemory(vkMemory) {}
+    Buffer_t(Device_t* device, VkBuffer vkBuffer, VkDeviceMemory vkMemory, MemoryLocation location, BufferUsage usage, uint64_t size) : base(&device->base.obj, internal::ObjectType::Buffer, vkBuffer), device(device), vkBuffer(vkBuffer), vkMemory(vkMemory), location(location), usage(usage), size(size) {}
 
     ~Buffer_t() {
         vkDeviceWaitIdle(device->vkDevice);
@@ -1949,11 +2005,13 @@ struct Pipeline_t {
 
     Device_t* device;
     VkPipeline vkPipeline;
+    VkPipelineLayout vkPipelineLayout;
 
-    Pipeline_t(Device_t* device, VkPipeline vkPipeline) : base(&device->base.obj, ObjectType::Pipeline, vkPipeline), device(device), vkPipeline(vkPipeline) {}
+    Pipeline_t(Device_t* device, VkPipeline vkPipeline, VkPipelineLayout vkPipelineLayout) : base(&device->base.obj, ObjectType::Pipeline, vkPipeline), device(device), vkPipeline(vkPipeline), vkPipelineLayout(vkPipelineLayout) {}
 
     ~Pipeline_t() {
         vkDeviceWaitIdle(device->vkDevice);
+        vkDestroyPipelineLayout(device->vkDevice, vkPipelineLayout, nullptr);
         vkDestroyPipeline(device->vkDevice, vkPipeline, nullptr);
     }
 };
@@ -2308,8 +2366,8 @@ static DebugCallback debugCallback = nullptr;
 #endif /* #ifdef KOBALT_DEFAULT_DEBUG_MESSENGER */
 
 #define KOBALT_PRINT(sev_, obj_, msg_) if (internal::debugCallback != nullptr) { internal::debugCallback(msg_, sev_, obj_); }
-#define KOBALT_PRINTF(sev_, obj_, fmt_, ...) if (internal::debugCallback != nullptr) { char buffer[256]; snprintf(buffer, 256, fmt_, __VA_ARGS__); internal::debugCallback(buffer, sev_, obj_); }
-#define KOBALT_PRINTF_SIZED(sev_, obj_, bufsize_, fmt_, ...) if (internal::debugCallback != nullptr) { char buffer[bufsize_]; snprintf(buffer, bufsize_, fmt_, __VA_ARGS__); internal::debugCallback(buffer, sev_, obj_); }
+#define KOBALT_PRINTF(sev_, obj_, fmt_, ...) if (internal::debugCallback != nullptr) { char buffer_[256]; snprintf(buffer_, 256, fmt_, __VA_ARGS__); internal::debugCallback(buffer_, sev_, obj_); }
+#define KOBALT_PRINTF_SIZED(sev_, obj_, bufsize_, fmt_, ...) if (internal::debugCallback != nullptr) { char buffer_[bufsize_]; snprintf(buffer_, bufsize_, fmt_, __VA_ARGS__); internal::debugCallback(buffer_, sev_, obj_); }
 
 static VkBool32 vkDebugMessengerCallback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity, VkDebugUtilsMessageTypeFlagsEXT messageTypes, const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData, void* pUserData) {
     DebugSeverity severity = DebugSeverity::Error;
@@ -2616,6 +2674,8 @@ void destroy(Object_t* object) {
         KOBALT_INTERNAL_DESTROY_OBJ(object, Shader);
         KOBALT_INTERNAL_DESTROY_OBJ(object, VertexInputState);
         KOBALT_INTERNAL_DESTROY_OBJ(object, RasterizationState);
+        KOBALT_INTERNAL_DESTROY_OBJ(object, Pipeline);
+        KOBALT_INTERNAL_DESTROY_OBJ(object, Buffer);
         KOBALT_INTERNAL_DESTROY_OBJ(object, CommandList);
         KOBALT_INTERNAL_DESTROY_OBJ(object, QueueSync);
         KOBALT_INTERNAL_DESTROY_OBJ(object, HostSync);
@@ -2767,10 +2827,14 @@ bool createDevice(Device& device, uint32_t id, DeviceSupport support) {
     internal::ExtraDeviceFeatures extraSupport = {};
     DeviceSupport availableSupport = {};
     for (VkExtensionProperties const& e : availableExtensions) {
-        if (strcmp(e.extensionName, VK_KHR_DYNAMIC_RENDERING_EXTENSION_NAME) == 0) {
-            availableSupport.dynamicRenderPass = true;
-        } else if (strcmp(e.extensionName, VK_KHR_SWAPCHAIN_EXTENSION_NAME) == 0) {
+        if (strcmp(e.extensionName, VK_KHR_SWAPCHAIN_EXTENSION_NAME) == 0) {
             availableSupport.swapchain = true;
+        } else if (strcmp(e.extensionName, VK_KHR_MAINTENANCE1_EXTENSION_NAME) == 0) {
+            availableSupport.flipViewport = true;
+        } else if (strcmp(e.extensionName, VK_KHR_DYNAMIC_RENDERING_EXTENSION_NAME) == 0) {
+            availableSupport.dynamicRenderPass = true;
+        } else if (strcmp(e.extensionName, VK_KHR_PUSH_DESCRIPTOR_EXTENSION_NAME) == 0) {
+            availableSupport.dynamicPipelineResources = true;
         }
     }
 
@@ -2780,12 +2844,20 @@ bool createDevice(Device& device, uint32_t id, DeviceSupport support) {
     }
 
     std::vector<prism::vk::Extension> extensions;
+    if (support.swapchain) {
+        extensions.push_back(VK_KHR_SWAPCHAIN_EXTENSION_NAME);
+    }
+
+    if (support.flipViewport) {
+        extensions.push_back(VK_KHR_MAINTENANCE1_EXTENSION_NAME);
+    }
+
     if (support.dynamicRenderPass) {
         extensions.push_back(VK_KHR_DYNAMIC_RENDERING_EXTENSION_NAME);
     }
 
-    if (support.swapchain) {
-        extensions.push_back(VK_KHR_SWAPCHAIN_EXTENSION_NAME);
+    if (support.dynamicPipelineResources) {
+        extensions.push_back(VK_KHR_PUSH_DESCRIPTOR_EXTENSION_NAME);
     }
     
 #ifdef __APPLE__
@@ -2901,11 +2973,37 @@ bool createDevice(Device& device, uint32_t id, DeviceSupport support) {
 
     VkDevice vkDevice;
     if (!prism::vk::createDevice(vkPhysical, queueCIs, extensions, pNext, nullptr, nullptr, vkDevice)) {
-        KOBALT_PRINT(DebugSeverity::Error, nullptr, "internal Vulkan error: device creation");
+        KOBALT_PRINT(DebugSeverity::Error, nullptr, "internal Vulkan error; failed to create device");
         return false;
     }
 
-    internal::Device_t* dev = new internal::Device_t(vkDevice, vkPhysical, support, extraSupport, internal::DeviceQueues(bestGraphics, graphicsTypes, bestCompute, computeTypes, bestTransfer, transferTypes, bestGeneral, generalTypes));
+    VkCommandPoolCreateInfo transferPoolCI = {};
+    transferPoolCI.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+    transferPoolCI.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
+    transferPoolCI.queueFamilyIndex = bestTransfer;
+
+    VkCommandPool vkTransferCommandPool;
+    if (vkCreateCommandPool(vkDevice, &transferPoolCI, nullptr, &vkTransferCommandPool) != VK_SUCCESS) {
+        KOBALT_PRINT(DebugSeverity::Error, nullptr, "internal Vulkan error; failed to create transfer command pool");
+        vkDestroyDevice(vkDevice, nullptr);
+        return false;
+    }
+
+    VkCommandBufferAllocateInfo transferBufferAI = {};
+    transferBufferAI.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+    transferBufferAI.commandPool = vkTransferCommandPool;
+    transferBufferAI.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+    transferBufferAI.commandBufferCount = 1;
+
+    VkCommandBuffer vkTransferCommandBuffer;
+    if (vkAllocateCommandBuffers(vkDevice, &transferBufferAI, &vkTransferCommandBuffer) != VK_SUCCESS) {
+        KOBALT_PRINT(DebugSeverity::Error, nullptr, "internal Vulkan error; failed to create transfer command pool");
+        vkDestroyCommandPool(vkDevice, vkTransferCommandPool, nullptr);
+        vkDestroyDevice(vkDevice, nullptr);
+        return false;
+    }
+
+    internal::Device_t* dev = new internal::Device_t(vkDevice, vkPhysical, support, extraSupport, internal::DeviceQueues(bestGraphics, graphicsTypes, bestCompute, computeTypes, bestTransfer, transferTypes, bestGeneral, generalTypes), vkTransferCommandPool, vkTransferCommandBuffer);
     device = &dev->base.obj;
     return true;
 }
@@ -3246,7 +3344,7 @@ bool createRasterizationState(RasterizationState& rasterizationState, Device dev
     return true;
 }
 
-bool createGraphicsPipeline(Pipeline& pipeline, Device device, VertexInputState vertexInputState, TessellationState tessellationState, RasterizationState rasterizationState, DepthStencilState depthStencilState, BlendState blendState, PipelineShader const* vertexShader, PipelineShader const* tessControlShader, PipelineShader const* tessEvalShader, PipelineShader const* geometryShader, PipelineShader const* fragmentShader, GraphicsPipelineAttachment const* inputAttachments, uint32_t inputAttachmentCount, GraphicsPipelineAttachment const* renderTargets, uint32_t renderTargetCount, GraphicsPipelineAttachment const* depthStencilTarget, uint32_t subpass, bool dynamicRenderPass, uint32_t viewMask) {
+bool createGraphicsPipeline(Pipeline& pipeline, Device device, VertexInputState vertexInputState, TessellationState tessellationState, RasterizationState rasterizationState, DepthStencilState depthStencilState, BlendState blendState, PipelineShader const* vertexShader, PipelineShader const* tessControlShader, PipelineShader const* tessEvalShader, PipelineShader const* geometryShader, PipelineShader const* fragmentShader, PipelineResourceLayout layout, GraphicsPipelineAttachment const* inputAttachments, uint32_t inputAttachmentCount, GraphicsPipelineAttachment const* renderTargets, uint32_t renderTargetCount, GraphicsPipelineAttachment const* depthStencilTarget, uint32_t subpass, bool dynamicRenderPass, uint32_t viewMask) {
     if (device == nullptr) {
         KOBALT_PRINT(DebugSeverity::Error, nullptr, "device is null");
         return false;
@@ -3355,9 +3453,20 @@ bool createGraphicsPipeline(Pipeline& pipeline, Device device, VertexInputState 
         if (renderTargets != nullptr) {
             for (uint32_t i = 0; i < renderTargetCount; ++i) {
                 blendAttachments[i].blendEnable = false;
+                blendAttachments[i].srcColorBlendFactor = VK_BLEND_FACTOR_ONE;
+                blendAttachments[i].dstColorBlendFactor = VK_BLEND_FACTOR_ZERO;
+                blendAttachments[i].colorBlendOp = VK_BLEND_OP_ADD;
+                blendAttachments[i].srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
+                blendAttachments[i].dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
+                blendAttachments[i].alphaBlendOp = VK_BLEND_OP_ADD;
+                blendAttachments[i].colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
             }
         }
     }
+
+    VkPipelineMultisampleStateCreateInfo defaultMultisampleCI = {};
+    defaultMultisampleCI.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
+    defaultMultisampleCI.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
 
     VkPipelineColorBlendStateCreateInfo defaultBlendCI = {};
     defaultBlendCI.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
@@ -3430,6 +3539,21 @@ bool createGraphicsPipeline(Pipeline& pipeline, Device device, VertexInputState 
         }
     }
 
+    internal::Device_t* dev = reinterpret_cast<internal::Device_t*>(device);
+
+    VkPipelineLayoutCreateInfo pipelineLayoutCI = {};
+    pipelineLayoutCI.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+
+    if (layout != nullptr) {
+        /* TODO: */
+    }
+
+    VkPipelineLayout vkPipelineLayout;
+    if (vkCreatePipelineLayout(dev->vkDevice, &pipelineLayoutCI, nullptr, &vkPipelineLayout) != VK_SUCCESS) {
+        KOBALT_PRINT(DebugSeverity::Error, device, "internal Vulkan error; failed to create pipeline layout");
+        return false;
+    }
+
     VkGraphicsPipelineCreateInfo graphicsPipelineCI = {};
     graphicsPipelineCI.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
     graphicsPipelineCI.pNext = dynamicRenderPass ? &renderingCI : nullptr;
@@ -3440,36 +3564,194 @@ bool createGraphicsPipeline(Pipeline& pipeline, Device device, VertexInputState 
     graphicsPipelineCI.pTessellationState = /* TODO: */ nullptr;
     graphicsPipelineCI.pViewportState = &viewportCI;
     graphicsPipelineCI.pRasterizationState = internalRasterizationState == nullptr ? &defaultRasterizationCI : &internalRasterizationState->createInfo;
-    graphicsPipelineCI.pMultisampleState = /* TODO: */ nullptr;
+    graphicsPipelineCI.pMultisampleState = /* TODO: */ &defaultMultisampleCI;
     graphicsPipelineCI.pDepthStencilState = /* TODO: */ nullptr;
     graphicsPipelineCI.pColorBlendState = /* TODO: */ &defaultBlendCI;
     graphicsPipelineCI.pDynamicState = &dynamicCI;
-    graphicsPipelineCI.layout = /* TODO: */ nullptr;
+    graphicsPipelineCI.layout = vkPipelineLayout;
     graphicsPipelineCI.renderPass = /* TODO: */ nullptr;
     graphicsPipelineCI.subpass = subpass;
     graphicsPipelineCI.basePipelineHandle = nullptr;
     graphicsPipelineCI.basePipelineIndex = 0;
 
-    internal::Device_t* dev = reinterpret_cast<internal::Device_t*>(device);
-
     VkPipeline vkPipeline;
     if (vkCreateGraphicsPipelines(dev->vkDevice, nullptr, 1, &graphicsPipelineCI, nullptr, &vkPipeline) != VK_SUCCESS) {
         KOBALT_PRINT(DebugSeverity::Error, device, "internal Vulkan error; failed to create graphics pipeline");
+        vkDestroyPipelineLayout(dev->vkDevice, vkPipelineLayout, nullptr);
         return false;
     }
 
-    pipeline = &(new internal::Pipeline_t(dev, vkPipeline))->base.obj;
+    pipeline = &(new internal::Pipeline_t(dev, vkPipeline, vkPipelineLayout))->base.obj;
     return true;
 }
 
-bool createTextureView(TextureView& view, Device device, Texture texture, TextureFormat format, TextureDimensions dimensions, ComponentMapping const* mapping, TextureSubresource const* subresource) {
+bool createBuffer(Buffer& buffer, Device device, uint64_t size, MemoryLocation location, BufferUsage usage) {
     if (device == nullptr) {
         KOBALT_PRINT(DebugSeverity::Error, nullptr, "device is null");
         return false;
     }
 
+    if (internal::memoryLocationToVkMemoryPropertyFlags(location) == VK_MEMORY_PROPERTY_FLAG_BITS_MAX_ENUM) {
+        KOBALT_PRINTF(DebugSeverity::Error, device, "location has invalid value: %u", static_cast<uint32_t>(location));
+        return false;
+    }
+
+    if (internal::bufferUsageToVkBufferUsageFlags(usage) == VK_BUFFER_USAGE_FLAG_BITS_MAX_ENUM) {
+        KOBALT_PRINTF(DebugSeverity::Error, device, "usage has invalid value: %u", static_cast<uint32_t>(usage));
+        return false;
+    }
+
+    internal::Device_t* dev = reinterpret_cast<internal::Device_t*>(device);
+
+    VkBuffer vkBuffer;
+    if (!prism::vk::createBufferSimple(dev->vkDevice, size, internal::bufferUsageToVkBufferUsageFlags(usage), nullptr, vkBuffer)) {
+        KOBALT_PRINT(DebugSeverity::Error, device, "internal Vulkan error; failed to create buffer");
+        return false;
+    }
+
+    VkDeviceMemory vkDeviceMemory;
+    if (!prism::vk::allocateBufferSimple(dev->vkDevice, dev->vkPhysicalDevice, vkBuffer, internal::memoryLocationToVkMemoryPropertyFlags(location), nullptr, vkDeviceMemory)) {
+        KOBALT_PRINT(DebugSeverity::Error, device, "internal Vulkan error; failed to allocate buffer memory");
+        vkDestroyBuffer(dev->vkDevice, vkBuffer, nullptr);
+        return false;
+    }
+
+    if (vkBindBufferMemory(dev->vkDevice, vkBuffer, vkDeviceMemory, 0) != VK_SUCCESS) {
+        KOBALT_PRINT(DebugSeverity::Error, device, "internal Vulkan error; failed to bind buffer memory");
+        vkFreeMemory(dev->vkDevice, vkDeviceMemory, nullptr);
+        vkDestroyBuffer(dev->vkDevice, vkBuffer, nullptr);
+        return false;
+    }
+
+    buffer = &(new internal::Buffer_t(dev, vkBuffer, vkDeviceMemory, location, usage, size))->base.obj;
+    return true;
+}
+
+bool copyBuffer(Buffer srcBuffer, uint64_t srcOffset, Buffer dstBuffer, uint64_t dstOffset, uint64_t size, HostSync signalHostSync, QueueSync const* signalQueueSyncs, uint32_t signalQueueSyncCount) {
+    if (srcBuffer == nullptr) {
+        KOBALT_PRINT(DebugSeverity::Error, nullptr, "srcBuffer is null");
+        return false;
+    }
+
+    if (dstBuffer == nullptr) {
+        KOBALT_PRINT(DebugSeverity::Error, nullptr, "dstBuffer is null");
+        return false;
+    }
+
+    if (srcBuffer->device != dstBuffer->device) {
+        KOBALT_PRINTF(DebugSeverity::Error, srcBuffer, "srcBuffer and dstBuffer do not share same parent device (srcBuffer->device: 0x%016llx, dstBuffer->device: 0x%016llx)", reinterpret_cast<unsigned long long>(srcBuffer->device), reinterpret_cast<unsigned long long>(dstBuffer->device));
+        return false;
+    }
+
+    internal::Buffer_t* src = reinterpret_cast<internal::Buffer_t*>(srcBuffer);
+    internal::Buffer_t* dst = reinterpret_cast<internal::Buffer_t*>(dstBuffer);
+
+    if (srcOffset + size > src->size) {
+        KOBALT_PRINTF(DebugSeverity::Error, srcBuffer, "srcOffset and size are invalid for srcBuffer due to being out of bounds (srcBuffer size: %llu, requested src copy start: %llu, requested src copy end %llu", static_cast<unsigned long long>(src->size), static_cast<unsigned long long>(srcOffset), static_cast<unsigned long long>(srcOffset + size));
+        return false;
+    }
+
+    if (dstOffset + size > src->size) {
+        KOBALT_PRINTF(DebugSeverity::Error, srcBuffer, "dstOffset and size are invalid for dstBuffer due to being out of bounds (dstBuffer size: %llu, requested dst copy start: %llu, requested dst copy end %llu", static_cast<unsigned long long>(dst->size), static_cast<unsigned long long>(dstOffset), static_cast<unsigned long long>(dstOffset + size));
+        return false;
+    }
+
+    internal::Device_t* dev = src->device;
+
+    if (vkResetCommandBuffer(dev->vkTransferCommandBuffer, 0) != VK_SUCCESS) {
+        KOBALT_PRINT(DebugSeverity::Error, srcBuffer, "internal Vulkan error; failed to reset transfer command buffer");
+        return false;
+    }
+
+    VkCommandBufferBeginInfo beginInfo = {};
+    beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+
+    if (vkBeginCommandBuffer(dev->vkTransferCommandBuffer, &beginInfo) != VK_SUCCESS) {
+        KOBALT_PRINT(DebugSeverity::Error, srcBuffer, "internal Vulkan error; failed to begin transfer command buffer");
+        return false;
+    }
+
+    VkBufferCopy region = {};
+    region.dstOffset = dstOffset;
+    region.size = size;
+    region.srcOffset = srcOffset;
+
+    vkCmdCopyBuffer(dev->vkTransferCommandBuffer, src->vkBuffer, dst->vkBuffer, 1, &region);
+
+    if (vkEndCommandBuffer(dev->vkTransferCommandBuffer) != VK_SUCCESS) {
+        KOBALT_PRINT(DebugSeverity::Error, srcBuffer, "internal Vulkan error; failed to end transfer command buffer");
+        return false;
+    }
+    
+    std::vector<VkSemaphore> signals(signalQueueSyncCount);
+    VkSemaphore const* pSignals = nullptr;
+    if (signalQueueSyncs != nullptr) {
+        for (uint32_t i = 0; i < signalQueueSyncCount; ++i) {
+            if (signalQueueSyncs[i] == nullptr) {
+                KOBALT_PRINTF(DebugSeverity::Error, srcBuffer, "signalQueueSyncs[%u] is null", i);
+                return false;
+            }
+
+            signals[i] = reinterpret_cast<internal::QueueSync_t*>(signalQueueSyncs[i])->vkSemaphore;
+        }
+
+        pSignals = signals.data();
+    }
+
+    VkSubmitInfo submitInfo = {};
+    submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+    submitInfo.waitSemaphoreCount = 0;
+    submitInfo.pWaitSemaphores = nullptr;
+    submitInfo.pWaitDstStageMask = nullptr;
+    submitInfo.commandBufferCount = 1;
+    submitInfo.pCommandBuffers = &dev->vkTransferCommandBuffer;
+    submitInfo.signalSemaphoreCount = pSignals != nullptr ? signalQueueSyncCount : 0;
+    submitInfo.pSignalSemaphores = pSignals;
+
+    internal::HostSync_t* hs = reinterpret_cast<internal::HostSync_t*>(signalHostSync);
+
+    if (vkQueueSubmit(dev->queues.transfer, 1, &submitInfo, hs != nullptr ? hs->vkFence : nullptr) != VK_SUCCESS) {
+        KOBALT_PRINT(DebugSeverity::Error, srcBuffer, "internal Vulkan error; failed to submit transfer command buffer");
+        return false;
+    }
+
+    return true;
+}
+
+bool mapBuffer(void*& mappedPointer, Buffer buffer, uint64_t offset, uint64_t size) {
+    if (buffer == nullptr) {
+        KOBALT_PRINT(DebugSeverity::Error, nullptr, "buffer is null");
+        return false;
+    }
+
+    internal::Buffer_t* buf = reinterpret_cast<internal::Buffer_t*>(buffer);
+
+    if (offset + size > buf->size) {
+        KOBALT_PRINTF(DebugSeverity::Error, buffer, "offset and size are invalid for buffer due to being out of bounds (buffer size: %llu, requested map start: %llu, requested map end: %llu)", static_cast<unsigned long long>(buf->size), static_cast<unsigned long long>(offset), static_cast<unsigned long long>(size));
+        return false;
+    }
+
+    return vkMapMemory(buf->device->vkDevice, buf->vkMemory, offset, size, 0, &mappedPointer) == VK_SUCCESS;
+}
+
+void unmapBuffer(Buffer buffer, void* pointer) {
+    if (buffer == nullptr) {
+        KOBALT_PRINT(DebugSeverity::Error, nullptr, "buffer is null");
+        return;
+    }
+
+    if (pointer == nullptr) {
+        KOBALT_PRINT(DebugSeverity::Error, buffer, "pointer is null");
+        return;
+    }
+
+    internal::Buffer_t* buf = reinterpret_cast<internal::Buffer_t*>(buffer);
+    vkUnmapMemory(buf->device->vkDevice, buf->vkMemory);
+}
+
+bool createTextureView(TextureView& view, Texture texture, TextureFormat format, TextureDimensions dimensions, ComponentMapping const* mapping, TextureSubresource const* subresource) {
     if (texture == nullptr) {
-        KOBALT_PRINT(DebugSeverity::Error, device, "texture is null");
+        KOBALT_PRINT(DebugSeverity::Error, nullptr, "texture is null");
         return false;
     }
 
@@ -3513,8 +3795,8 @@ bool createTextureView(TextureView& view, Device device, Texture texture, Textur
         map.a = ComponentSwizzle::Identity;
     }
 
-    internal::Device_t* dev = reinterpret_cast<internal::Device_t*>(device);
     internal::Texture_t* tex = reinterpret_cast<internal::Texture_t*>(texture);
+    internal::Device_t* dev = tex->device;
 
     /* TODO: better compatibility check */
 
@@ -3579,7 +3861,7 @@ bool createTextureView(TextureView& view, Device device, Texture texture, Textur
 
             VkImageView vkImageView;
             if (vkCreateImageView(dev->vkDevice, &createInfo, nullptr, &vkImageView) != VK_SUCCESS) {
-                KOBALT_PRINTF(DebugSeverity::Error, device, "internal Vulkan error; failed to create image view for swapchain internal image %zu", i);
+                KOBALT_PRINTF(DebugSeverity::Error, texture, "internal Vulkan error; failed to create image view for swapchain internal image %zu", i);
                 for (size_t j = 0; j < i; ++i) {
                     vkDestroyImageView(dev->vkDevice, swp->internalBackbuffers[j].vkImageViews[internalViewIndex], nullptr);
                 }
@@ -3598,7 +3880,7 @@ bool createTextureView(TextureView& view, Device device, Texture texture, Textur
 
     VkImageView vkImageView;
     if (vkCreateImageView(dev->vkDevice, &createInfo, nullptr, &vkImageView) != VK_SUCCESS) {
-        KOBALT_PRINT(DebugSeverity::Error, device, "internal Vulkan error; failed to create image view");
+        KOBALT_PRINT(DebugSeverity::Error, texture, "internal Vulkan error; failed to create image view");
         return false;
     }
 
@@ -4342,6 +4624,106 @@ bool endRenderPass(CommandList commandList) {
 
     KOBALT_PRINT(DebugSeverity::Error, commandList, "no render pass started");
     return false;
+}
+
+bool bindGraphicsPipeline(CommandList commandList, Pipeline pipeline) {
+    if (commandList == nullptr) {
+        KOBALT_PRINT(DebugSeverity::Error, nullptr, "command list is null");
+        return false;
+    }
+
+    if (pipeline == nullptr) {
+        KOBALT_PRINT(DebugSeverity::Error, commandList, "pipeline is null");
+        return false;
+    }
+
+    internal::CommandList_t* cmdList = reinterpret_cast<internal::CommandList_t*>(commandList);
+    internal::Device_t* dev = cmdList->device;
+    internal::Pipeline_t* ppln = reinterpret_cast<internal::Pipeline_t*>(pipeline);
+
+    vkCmdBindPipeline(cmdList->vkCmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, ppln->vkPipeline);
+    return true;
+}
+
+bool bindVertexBuffer(CommandList commandList, uint32_t index, Buffer buffer, uint64_t offset) {
+    if (commandList == nullptr) {
+        KOBALT_PRINT(DebugSeverity::Error, nullptr, "command list is null");
+        return false;
+    }
+
+    if (buffer == nullptr) {
+        KOBALT_PRINT(DebugSeverity::Error, commandList, "buffer is null");
+        return false;
+    }
+
+    internal::CommandList_t* cmdList = reinterpret_cast<internal::CommandList_t*>(commandList);
+    internal::Buffer_t* buf = reinterpret_cast<internal::Buffer_t*>(buffer);
+
+    if (offset > buf->size) {
+        KOBALT_PRINTF(DebugSeverity::Error, commandList, "offset is out of bounds (offset: %llu, buffer size: %llu)", static_cast<unsigned long long>(offset), static_cast<unsigned long long>(buf->size));
+        return false;
+    }
+
+    vkCmdBindVertexBuffers(cmdList->vkCmdBuffer, index, 1, &buf->vkBuffer, &offset);
+    return true;
+}
+
+bool setViewport(CommandList commandList, float x, float y, float width, float height, float nearDepth, float farDepth) {
+    if (commandList == nullptr) {
+        KOBALT_PRINT(DebugSeverity::Error, nullptr, "command list is null");
+        return false;
+    }
+
+    internal::CommandList_t* cmdList = reinterpret_cast<internal::CommandList_t*>(commandList);
+    internal::Device_t* dev = cmdList->device;
+
+    VkViewport vp = {};
+    vp.x = x;
+    vp.y = y;
+    vp.width = width;
+    vp.height = height;
+    vp.minDepth = nearDepth;
+    vp.maxDepth = farDepth;
+
+    if (dev->enabledSupport.flipViewport) {
+        vp.y = vp.height - vp.y;
+        vp.height *= -1;
+    }
+
+    vkCmdSetViewport(cmdList->vkCmdBuffer, 0, 1, &vp);
+    return true;
+}
+
+bool setScissor(CommandList commandList, uint32_t x, uint32_t y, uint32_t width, uint32_t height) {
+    if (commandList == nullptr) {
+        KOBALT_PRINT(DebugSeverity::Error, nullptr, "command list is null");
+        return false;
+    }
+
+    internal::CommandList_t* cmdList = reinterpret_cast<internal::CommandList_t*>(commandList);
+    internal::Device_t* dev = cmdList->device;
+
+    VkRect2D scissor = {};
+    scissor.offset.x = x;
+    scissor.offset.y = y;
+    scissor.extent.width = width;
+    scissor.extent.height = height;
+
+    vkCmdSetScissor(cmdList->vkCmdBuffer, 0, 1, &scissor);
+    return true;
+}
+
+bool draw(CommandList commandList, uint32_t vertex, uint32_t count) {
+    if (commandList == nullptr) {
+        KOBALT_PRINT(DebugSeverity::Error, nullptr, "command list is null");
+        return false;
+    }
+
+    internal::CommandList_t* cmdList = reinterpret_cast<internal::CommandList_t*>(commandList);
+    internal::Device_t* dev = cmdList->device;
+
+    vkCmdDraw(cmdList->vkCmdBuffer, count, 1, vertex, 0);
+    return true;
 }
 
 } /* namespace cmd */

@@ -509,6 +509,8 @@ enum class ShaderStage {
     Pixel = Fragment,
 };
 
+KOBALT_ENUM_BITMASK(ShaderStage);
+
 enum class PipelineResourceType {
     Buffer,
     DynamicBuffer,
@@ -710,6 +712,7 @@ struct PipelineResourceBinding {
     uint32_t binding;
     PipelineResourceType type;
     PipelineResourceAccess access;
+    ShaderStage stages;
     uint32_t arrayLength;
 };
 
@@ -867,13 +870,13 @@ bool createBlendAttachmentState(BlendAttachmentState& blendAttachmentState, Devi
 bool createBlendState(BlendState& blendState, Device device, BlendAttachmentState const* attachments, uint32_t attachmentCount, bool logicOpEnable, LogicOp logicOp, BlendConstants const* constants);
 
 /* pipeline resources */
-bool createPipelineResourceLayout(PipelineResourceLayout& layout, PipelineResourceBinding const* bindings, uint32_t bindingCount, PipelinePushConstantRange const* pushConstantRanges, uint32_t pushConstantCount);
+bool createPipelineResourceLayout(PipelineResourceLayout& layout, Device device, PipelineResourceBinding const* bindings, uint32_t bindingCount, PipelinePushConstantRange const* pushConstantRanges, uint32_t pushConstantCount);
 bool createPipelineResourcePool(PipelineResourcePool& pool, uint32_t maxSets, PipelineResourceAllocationLimit const* resourceLimits, uint32_t resourceLimitCount, bool dynamicUpdate);
 bool allocatePipelineResourceSet(PipelineResourceSet& set, PipelineResourceLayout layout, PipelineResourcePool pool);
 bool allocatePipelineResourceSets(PipelineResourceSet* sets, PipelineResourceLayout const* layouts, uint32_t setCount, PipelineResourcePool pool);
 bool updatePipelineResourceSet(PipelineResourceSet set, PipelineResourceTexture const* textures, uint32_t textureCount, PipelineResourceBuffer const* buffers, uint32_t bufferCount, PipelineResourceTexelBuffer const* texelBuffers, uint32_t texelBufferCount);
 
-bool createGraphicsPipeline(Pipeline& pipeline, Device device, VertexInputState vertexInputState, TessellationState tessellationState, RasterizationState rasterizationState, DepthStencilState depthStencilState, BlendState blendState, PipelineShader const* vertexShader, PipelineShader const* tessControlShader, PipelineShader const* tessEvalShader, PipelineShader const* geometryShader, PipelineShader const* fragmentShader, PipelineResourceLayout layout, GraphicsPipelineAttachment const* inputAttachments, uint32_t inputAttachmentCount, GraphicsPipelineAttachment const* renderTargets, uint32_t renderTargetCount, GraphicsPipelineAttachment const* depthStencilTarget, uint32_t subpass, bool dynamicRenderPass, uint32_t viewMask);
+bool createGraphicsPipeline(Pipeline& pipeline, Device device, VertexInputState vertexInputState, TessellationState tessellationState, RasterizationState rasterizationState, DepthStencilState depthStencilState, BlendState blendState, PipelineShader const* vertexShader, PipelineShader const* tessControlShader, PipelineShader const* tessEvalShader, PipelineShader const* geometryShader, PipelineShader const* fragmentShader, PipelineResourceLayout const* layouts, uint32_t layoutCount, GraphicsPipelineAttachment const* inputAttachments, uint32_t inputAttachmentCount, GraphicsPipelineAttachment const* renderTargets, uint32_t renderTargetCount, GraphicsPipelineAttachment const* depthStencilTarget, uint32_t subpass, bool dynamicRenderPass, uint32_t viewMask);
 /* TODO: */ bool createComputePipeline();
 
 bool storePipeline(Pipeline pipeline, void* data, uint64_t* size);
@@ -1675,6 +1678,93 @@ inline VkPipelineStageFlags pipelineStageToVkPipelineStageFlags(PipelineStage st
     return flags;
 }
 
+inline VkDescriptorType pipelineResourceTypeAndPipelineResourceAcccessToVkDescriptorType(PipelineResourceType type, PipelineResourceAccess access) {
+    switch (type) {
+        case PipelineResourceType::Buffer:
+            switch (access) {
+                case PipelineResourceAccess::Storage:   return VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+                case PipelineResourceAccess::Uniform:   return VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+                default: break;
+            }
+            return VK_DESCRIPTOR_TYPE_MAX_ENUM;
+        case PipelineResourceType::DynamicBuffer:
+            switch (access) {
+                case PipelineResourceAccess::Storage:   return VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC;
+                case PipelineResourceAccess::Uniform:   return VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
+                default: break;
+            }
+            return VK_DESCRIPTOR_TYPE_MAX_ENUM;
+        case PipelineResourceType::TexelBuffer:
+            switch (access) {
+                case PipelineResourceAccess::Storage:   return VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER;
+                case PipelineResourceAccess::Uniform:   return VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER;
+                default: break;
+            }
+            return VK_DESCRIPTOR_TYPE_MAX_ENUM;
+        case PipelineResourceType::Texture:
+            switch (access) {
+                case PipelineResourceAccess::Storage:   return VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+                case PipelineResourceAccess::Sampled:   return VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
+                default: break;
+            }
+            return VK_DESCRIPTOR_TYPE_MAX_ENUM;
+        case PipelineResourceType::Sampler:
+            switch (access) {
+                case PipelineResourceAccess::Uniform:   return VK_DESCRIPTOR_TYPE_SAMPLER;
+                default: break;
+            }
+            return VK_DESCRIPTOR_TYPE_MAX_ENUM;
+        case PipelineResourceType::TextureAndSampler:
+            switch (access) {
+                case PipelineResourceAccess::Sampled:   return VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+                default: break;
+            }
+            return VK_DESCRIPTOR_TYPE_MAX_ENUM;
+        case PipelineResourceType::InputAttachment:
+            switch (access) {
+                case PipelineResourceAccess::Sampled:   return VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT;
+                default: break;
+            }
+            return VK_DESCRIPTOR_TYPE_MAX_ENUM;
+        default: break;
+    }
+    
+    return VK_DESCRIPTOR_TYPE_MAX_ENUM;
+}
+
+inline VkShaderStageFlags shaderStageToVkShaderStageFlags(ShaderStage stage) {
+    VkShaderStageFlags flags = 0;
+    if ((stage & ShaderStage::Vertex) == ShaderStage::Vertex) {
+        flags |= VK_SHADER_STAGE_VERTEX_BIT;
+    }
+    
+    if ((stage & ShaderStage::TessellationControl) == ShaderStage::TessellationControl) {
+        flags |= VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT;
+    }
+    
+    if ((stage & ShaderStage::TessellationEvaluation) == ShaderStage::TessellationEvaluation) {
+        flags |= VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT;
+    }
+    
+    if ((stage & ShaderStage::Geometry) == ShaderStage::Geometry) {
+        flags |= VK_SHADER_STAGE_GEOMETRY_BIT;
+    }
+    
+    if ((stage & ShaderStage::Fragment) == ShaderStage::Fragment) {
+        flags |= VK_SHADER_STAGE_FRAGMENT_BIT;
+    }
+    
+    if ((stage & ShaderStage::Compute) == ShaderStage::Compute) {
+        flags |= VK_SHADER_STAGE_COMPUTE_BIT;
+    }
+    
+    if (flags == 0) {
+        return VK_SHADER_STAGE_FLAG_BITS_MAX_ENUM;
+    }
+    
+    return flags;
+}
+
 inline VkAccessFlags resourceAccessToVkAccessFlags(ResourceAccess access) {
     VkAccessFlags flags = 0;
     if ((access & ResourceAccess::IndirectRead) == ResourceAccess::IndirectRead) {
@@ -2112,6 +2202,26 @@ struct DepthStencilState_t {
     }
 };
 
+struct PipelineResourceLayout_t {
+    ObjectBase_t base;
+    
+    Device_t* device;
+    VkDescriptorSetLayout vkDescLayout;
+    
+    std::vector<PipelineResourceBinding> bindings;
+    std::vector<PipelinePushConstantRange> pushConstantRanges;
+    
+    PipelineResourceLayout_t(Device_t* device, VkDescriptorSetLayout vkDescLayout, PipelineResourceBinding const* bindings, uint32_t bindingCount, PipelinePushConstantRange const* pushConstantRanges, uint32_t pushConstantCount) : base(&device->base.obj, ObjectType::PipelineResourceLayout, vkDescLayout), bindings(bindingCount), pushConstantRanges(pushConstantCount) {
+        this->bindings.assign(bindings, bindings + bindingCount);
+        this->pushConstantRanges.assign(pushConstantRanges, pushConstantRanges + pushConstantCount);
+    }
+    
+    ~PipelineResourceLayout_t() {
+        vkDeviceWaitIdle(device->vkDevice);
+        vkDestroyDescriptorSetLayout(device->vkDevice, vkDescLayout, nullptr);
+    }
+};
+
 struct Pipeline_t {
     ObjectBase_t base;
 
@@ -2364,10 +2474,10 @@ struct CommandList_t {
 
 namespace wsi {
 
- struct SwapchainBackbuffer {
-     VkImage vkImage;
-     std::vector<VkImageView> vkImageViews;
- };
+struct SwapchainBackbuffer {
+    VkImage vkImage;
+    std::vector<VkImageView> vkImageViews;
+};
 
 struct Swapchain_t {
     ObjectBase_t base;
@@ -2787,6 +2897,7 @@ void destroy(Object_t* object) {
         KOBALT_INTERNAL_DESTROY_OBJ(object, VertexInputState);
         KOBALT_INTERNAL_DESTROY_OBJ(object, RasterizationState);
         KOBALT_INTERNAL_DESTROY_OBJ(object, DepthStencilState);
+        KOBALT_INTERNAL_DESTROY_OBJ(object, PipelineResourceLayout);
         KOBALT_INTERNAL_DESTROY_OBJ(object, Pipeline);
         KOBALT_INTERNAL_DESTROY_OBJ(object, Buffer);
         KOBALT_INTERNAL_DESTROY_OBJ(object, Texture);
@@ -3506,7 +3617,71 @@ bool createDepthStencilState(DepthStencilState& depthStencilState, Device device
     return true;
 }
 
-bool createGraphicsPipeline(Pipeline& pipeline, Device device, VertexInputState vertexInputState, TessellationState tessellationState, RasterizationState rasterizationState, DepthStencilState depthStencilState, BlendState blendState, PipelineShader const* vertexShader, PipelineShader const* tessControlShader, PipelineShader const* tessEvalShader, PipelineShader const* geometryShader, PipelineShader const* fragmentShader, PipelineResourceLayout layout, GraphicsPipelineAttachment const* inputAttachments, uint32_t inputAttachmentCount, GraphicsPipelineAttachment const* renderTargets, uint32_t renderTargetCount, GraphicsPipelineAttachment const* depthStencilTarget, uint32_t subpass, bool dynamicRenderPass, uint32_t viewMask) {
+bool createPipelineResourceLayout(PipelineResourceLayout& layout, Device device, PipelineResourceBinding const* bindings, uint32_t bindingCount, PipelinePushConstantRange const* pushConstantRanges, uint32_t pushConstantCount) {
+    if (device == nullptr) {
+        KOBALT_PRINT(DebugSeverity::Error, nullptr, "device is null");
+        return false;
+    }
+
+    VkDescriptorSetLayoutBinding const* pDescBindings = nullptr;
+    std::vector<VkDescriptorSetLayoutBinding> descBindings(bindingCount);
+    if (bindings != nullptr) {
+        for (uint32_t i = 0; i < bindingCount; ++i) {
+            if (internal::pipelineResourceTypeAndPipelineResourceAcccessToVkDescriptorType(bindings[i].type, bindings[i].access) == VK_DESCRIPTOR_TYPE_MAX_ENUM) {
+                KOBALT_PRINTF(DebugSeverity::Error, device, "bindings[%u].type and/or bindings[%u].access has invalid value; type: bindings[%u].%u, access: bindings[%u].%u", i, i, i, static_cast<uint32_t>(bindings[i].type), i, static_cast<uint32_t>(bindings[i].access));
+                return false;
+            }
+            
+            if (internal::shaderStageToVkShaderStageFlags(bindings[i].stages) == VK_SHADER_STAGE_FLAG_BITS_MAX_ENUM) {
+                KOBALT_PRINTF(DebugSeverity::Error, device, "bindings[%u].stages has invalid value: %u", i, static_cast<uint32_t>(bindings[i].stages));
+                return false;
+            }
+            
+            descBindings[i].binding = bindings[i].binding;
+            descBindings[i].descriptorType = internal::pipelineResourceTypeAndPipelineResourceAcccessToVkDescriptorType(bindings[i].type, bindings[i].access);
+            descBindings[i].descriptorCount = bindings[i].arrayLength == 0 ? 1 : bindings[i].arrayLength;
+            descBindings[i].stageFlags = internal::shaderStageToVkShaderStageFlags(bindings[i].stages);
+            descBindings[i].pImmutableSamplers = nullptr;
+        }
+        
+        pDescBindings = descBindings.data();
+    }
+    
+    VkPushConstantRange const* pPCRanges = nullptr;
+    std::vector<VkPushConstantRange> pcRanges(pushConstantCount);
+    if (pushConstantRanges != nullptr) {
+        for (uint32_t i = 0; i < pushConstantCount; ++i) {
+            if (internal::shaderStageToVkShaderStageFlags(pushConstantRanges[i].stages) == VK_SHADER_STAGE_FLAG_BITS_MAX_ENUM) {
+                KOBALT_PRINTF(DebugSeverity::Error, device, "pushConstantRanges[%u].stages has invalid value: %u", i, static_cast<uint32_t>(pushConstantRanges[i].stages));
+                return false;
+            }
+            
+            pcRanges[i].stageFlags = internal::shaderStageToVkShaderStageFlags(pushConstantRanges[i].stages);
+            pcRanges[i].offset = pushConstantRanges[i].offset;
+            pcRanges[i].size = pushConstantRanges[i].size;
+        }
+        
+        pPCRanges = pcRanges.data();
+    }
+    
+    internal::Device_t* dev = reinterpret_cast<internal::Device_t*>(device);
+    
+    VkDescriptorSetLayoutCreateInfo descLayoutCI = {};
+    descLayoutCI.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+    descLayoutCI.bindingCount = pDescBindings == nullptr ? 0 : bindingCount;
+    descLayoutCI.pBindings = pDescBindings;
+    
+    VkDescriptorSetLayout vkDescLayout;
+    if (vkCreateDescriptorSetLayout(dev->vkDevice, &descLayoutCI, nullptr, &vkDescLayout) != VK_SUCCESS) {
+        KOBALT_PRINT(DebugSeverity::Error, device, "internal Vulkan error; failed to create descriptor set layout");
+        return false;
+    }
+    
+    layout = &(new internal::PipelineResourceLayout_t(dev, vkDescLayout, bindings, bindingCount, pushConstantRanges, pushConstantCount))->base.obj;
+    return true;
+}
+
+bool createGraphicsPipeline(Pipeline& pipeline, Device device, VertexInputState vertexInputState, TessellationState tessellationState, RasterizationState rasterizationState, DepthStencilState depthStencilState, BlendState blendState, PipelineShader const* vertexShader, PipelineShader const* tessControlShader, PipelineShader const* tessEvalShader, PipelineShader const* geometryShader, PipelineShader const* fragmentShader, PipelineResourceLayout const* layouts, uint32_t layoutCount, GraphicsPipelineAttachment const* inputAttachments, uint32_t inputAttachmentCount, GraphicsPipelineAttachment const* renderTargets, uint32_t renderTargetCount, GraphicsPipelineAttachment const* depthStencilTarget, uint32_t subpass, bool dynamicRenderPass, uint32_t viewMask) {
     if (device == nullptr) {
         KOBALT_PRINT(DebugSeverity::Error, nullptr, "device is null");
         return false;
@@ -3650,6 +3825,8 @@ bool createGraphicsPipeline(Pipeline& pipeline, Device device, VertexInputState 
     internal::RasterizationState_t* internalRasterizationState = reinterpret_cast<internal::RasterizationState_t*>(rasterizationState);
     internal::DepthStencilState_t* internalDepthStencilState = reinterpret_cast<internal::DepthStencilState_t*>(depthStencilState);
     /* TODO: internal::BlendState_t* internalBlendState = reinterpret_cast<internal::BlendState_t*>(blendState); */
+    
+    internal::PipelineResourceLayout_t const* const* internalPipelineResourceLayout = reinterpret_cast<internal::PipelineResourceLayout_t const* const*>(layouts);
 
     VkFormat* pRtFormats = nullptr;
     std::vector<VkFormat> rtFormats(renderTargetCount);
@@ -3720,8 +3897,8 @@ bool createGraphicsPipeline(Pipeline& pipeline, Device device, VertexInputState 
     VkPipelineLayoutCreateInfo pipelineLayoutCI = {};
     pipelineLayoutCI.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
 
-    if (layout != nullptr) {
-        /* TODO: */
+    if (layouts != nullptr) {
+        
     }
 
     VkPipelineLayout vkPipelineLayout;

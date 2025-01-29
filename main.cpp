@@ -147,6 +147,16 @@ int main() {
 
     kobalt::DepthStencilState depthStencilState;
     assert(kobalt::createDepthStencilState(depthStencilState, device, true, true, kobalt::CompareOp::Greater, false, nullptr, nullptr));
+    
+    kobalt::PipelineResourceBinding pipelineBindings[1];
+    pipelineBindings[0].binding = 0;
+    pipelineBindings[0].type = kobalt::PipelineResourceType::TextureAndSampler;
+    pipelineBindings[0].access = kobalt::PipelineResourceAccess::Sampled;
+    pipelineBindings[0].stages = kobalt::ShaderStage::Pixel;
+    pipelineBindings[0].arrayLength = 0;
+    
+    kobalt::PipelineResourceLayout pipelineLayout;
+    assert(kobalt::createPipelineResourceLayout(pipelineLayout, device, pipelineBindings, 1, nullptr, 0));
 
 /* static render pass
     kobalt::RenderAttachment renderTargetAttachment = {};
@@ -195,7 +205,7 @@ int main() {
     pipelinePS.name = "psmain";
 
     kobalt::Pipeline graphicsPipeline;
-    assert(kobalt::createGraphicsPipeline(graphicsPipeline, device, vertexInputState, nullptr, rasterizationState, depthStencilState, nullptr, &pipelineVS, nullptr, nullptr, nullptr, &pipelinePS, nullptr, nullptr, 0, &graphicsPipelineAttachments[0], 1, &graphicsPipelineAttachments[1], 0, true, 0));
+    assert(kobalt::createGraphicsPipeline(graphicsPipeline, device, vertexInputState, nullptr, rasterizationState, depthStencilState, nullptr, &pipelineVS, nullptr, nullptr, nullptr, &pipelinePS, &pipelineLayout, 1, nullptr, 0, &graphicsPipelineAttachments[0], 1, &graphicsPipelineAttachments[1], 0, true, 0));
 
     kobalt::CommandList commandList;
     assert(kobalt::createCommandList(commandList, device, kobalt::QueueType::Graphics, false));
@@ -268,6 +278,7 @@ int main() {
     kobalt::destroy(readyToRenderSync);
     kobalt::destroy(commandList);
     kobalt::destroy(graphicsPipeline);
+    kobalt::destroy(pipelineLayout);
     kobalt::destroy(depthStencilState);
     kobalt::destroy(rasterizationState);
     kobalt::destroy(vertexInputState);

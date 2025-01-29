@@ -92,6 +92,12 @@ int main() {
     kobalt::TextureView backbufferView;
     assert(kobalt::createTextureView(backbufferView, backbuffer, kobalt::wsi::getSwapchainFormat(swapchain), kobalt::TextureDimensions::Texture2D, nullptr, nullptr));
 
+    kobalt::Texture depthTexture;
+    assert(kobalt::createTexture(depthTexture, device, kobalt::TextureDimensions::Texture2D, w, h, 1, 1, 1, 1, kobalt::TextureFormat::D16_UNorm, kobalt::MemoryLocation::DeviceLocal, kobalt::TextureUsage::DepthTarget));
+
+    kobalt::TextureView depthTextureView;
+    assert(kobalt::createTextureView(depthTextureView, depthTexture, kobalt::TextureFormat::D16_UNorm, kobalt::TextureDimensions::Texture2D, nullptr, nullptr));
+
     kobalt::Shader vertexShader;
     assert(loadShader(vertexShader, device, "shader.vertex.spv"));
     kobalt::setDebugName(vertexShader, "Vertex Shader");
@@ -101,9 +107,9 @@ int main() {
     kobalt::setDebugName(pixelShader, "Pixel Shader");
 
     float vertexData[] = {
-        -1.0f, -1.0f, 0.0f,     0.0f, 1.0f,     1.0f, 0.0f, 1.0f,
-         1.0f, -1.0f, 0.0f,     1.0f, 1.0f,     0.0f, 1.0f, 1.0f,
-         0.0f,  1.0f, 0.0f,     0.5f, 0.0f,     1.0f, 1.0f, 0.0f,
+        -1.0f, -1.0f, 0.001f,     0.0f, 1.0f,     1.0f, 0.0f, 1.0f,
+         1.0f, -1.0f, 0.001f,     1.0f, 1.0f,     0.0f, 1.0f, 1.0f,
+         0.0f,  1.0f, 0.001f,     0.5f, 0.0f,     1.0f, 1.0f, 0.0f,
     };
 
     kobalt::Buffer vertexBufferUpload;
@@ -139,6 +145,9 @@ int main() {
     assert(kobalt::createRasterizationState(rasterizationState, device, kobalt::FillMode::Fill, kobalt::CullMode::None, kobalt::FrontFace::CounterClockwise, 0.0f, 0.0f, 0.0f));
     kobalt::setDebugName(rasterizationState, "Rasterization State");
 
+    kobalt::DepthStencilState depthStencilState;
+    assert(kobalt::createDepthStencilState(depthStencilState, device, true, true, kobalt::CompareOp::Greater, false, nullptr, nullptr));
+
 /* static render pass
     kobalt::RenderAttachment renderTargetAttachment = {};
     renderTargetAttachment.format = kobalt::wsi::getSwapchainFormat(swapchain);
@@ -171,9 +180,11 @@ int main() {
     assert(kobalt::createGraphicsPipeline(graphicsPipeline, device, vertexInputState, rasterizationState, vertexShader, pixelShader, nullptr, nullptr, 0, &gpRenderTargetAttachment, 1, nullptr, 0, false, 0));
 */
 
-    kobalt::GraphicsPipelineAttachment gpRenderTargetAttachment = {};
-    gpRenderTargetAttachment.format = kobalt::wsi::getSwapchainFormat(swapchain);
-    gpRenderTargetAttachment.sampleCount = 1;
+    kobalt::GraphicsPipelineAttachment graphicsPipelineAttachments[2];
+    graphicsPipelineAttachments[0].format = kobalt::wsi::getSwapchainFormat(swapchain);
+    graphicsPipelineAttachments[0].sampleCount = 1;
+    graphicsPipelineAttachments[1].format = kobalt::TextureFormat::D16_UNorm;
+    graphicsPipelineAttachments[1].sampleCount = 1;
 
     kobalt::PipelineShader pipelineVS = {};
     pipelineVS.shader = vertexShader;
@@ -184,7 +195,7 @@ int main() {
     pipelinePS.name = "psmain";
 
     kobalt::Pipeline graphicsPipeline;
-    assert(kobalt::createGraphicsPipeline(graphicsPipeline, device, vertexInputState, nullptr, rasterizationState, nullptr, nullptr, &pipelineVS, nullptr, nullptr, nullptr, &pipelinePS, nullptr, nullptr, 0, &gpRenderTargetAttachment, 1, nullptr, 0, true, 0));
+    assert(kobalt::createGraphicsPipeline(graphicsPipeline, device, vertexInputState, nullptr, rasterizationState, depthStencilState, nullptr, &pipelineVS, nullptr, nullptr, nullptr, &pipelinePS, nullptr, nullptr, 0, &graphicsPipelineAttachments[0], 1, &graphicsPipelineAttachments[1], 0, true, 0));
 
     kobalt::CommandList commandList;
     assert(kobalt::createCommandList(commandList, device, kobalt::QueueType::Graphics, false));
@@ -218,17 +229,22 @@ int main() {
         assert(kobalt::cmd::executionBarrier(commandList, kobalt::PipelineStage::Top, kobalt::PipelineStage::RenderTarget));
         assert(kobalt::cmd::textureBarrier(commandList, kobalt::ResourceAccess::None, kobalt::ResourceAccess::RenderTargetWrite, kobalt::QueueTransfer::Identity, kobalt::QueueTransfer::Identity, kobalt::TextureLayout::Undefined, kobalt::TextureLayout::RenderTarget, backbuffer, nullptr));
 
-        kobalt::DynamicRenderAttachment rt = {};
-        rt.view = backbufferView;
-        rt.layout = kobalt::TextureLayout::RenderTarget;
-        rt.loadOp = kobalt::RenderAttachmentLoadOp::Clear;
-        rt.storeOp = kobalt::RenderAttachmentStoreOp::Store;
-        rt.clearValue.color.rgbaFloat[0] = 0.0f;
-        rt.clearValue.color.rgbaFloat[1] = 0.0f;
-        rt.clearValue.color.rgbaFloat[2] = 0.0f;
-        rt.clearValue.color.rgbaFloat[3] = 1.0f;
+        kobalt::DynamicRenderAttachment attachments[2];
+        attachments[0].view = backbufferView;
+        attachments[0].layout = kobalt::TextureLayout::RenderTarget;
+        attachments[0].loadOp = kobalt::RenderAttachmentLoadOp::Clear;
+        attachments[0].storeOp = kobalt::RenderAttachmentStoreOp::Store;
+        attachments[0].clearValue.color.rgbaFloat[0] = 0.0f;
+        attachments[0].clearValue.color.rgbaFloat[1] = 0.0f;
+        attachments[0].clearValue.color.rgbaFloat[2] = 0.0f;
+        attachments[0].clearValue.color.rgbaFloat[3] = 1.0f;
+        attachments[1].view = depthTextureView;
+        attachments[1].layout = kobalt::TextureLayout::DepthStencilTarget;
+        attachments[1].loadOp = kobalt::RenderAttachmentLoadOp::Clear;
+        attachments[1].storeOp = kobalt::RenderAttachmentStoreOp::DontCare;
+        attachments[1].clearValue.depthStencil.depth = 0.0f;
 
-        assert(kobalt::cmd::beginDynamicRenderPass(commandList, { 0, 0, static_cast<uint32_t>(w), static_cast<uint32_t>(h) }, 1, 0, &rt, 1, nullptr, nullptr));
+        assert(kobalt::cmd::beginDynamicRenderPass(commandList, { 0, 0, static_cast<uint32_t>(w), static_cast<uint32_t>(h) }, 1, 0, &attachments[0], 1, &attachments[1], nullptr));
         assert(kobalt::cmd::bindGraphicsPipeline(commandList, graphicsPipeline));
         assert(kobalt::cmd::bindVertexBuffer(commandList, 0, vertexBuffer, 0));
         assert(kobalt::cmd::setViewport(commandList, 0.0f, 0.0f, static_cast<float>(w), static_cast<float>(h), 0.0f, 1.0f));
@@ -252,11 +268,14 @@ int main() {
     kobalt::destroy(readyToRenderSync);
     kobalt::destroy(commandList);
     kobalt::destroy(graphicsPipeline);
+    kobalt::destroy(depthStencilState);
     kobalt::destroy(rasterizationState);
     kobalt::destroy(vertexInputState);
     kobalt::destroy(vertexBuffer);
     kobalt::destroy(vertexShader);
     kobalt::destroy(pixelShader);
+    kobalt::destroy(depthTextureView);
+    kobalt::destroy(depthTexture);
     kobalt::destroy(backbufferView);
     kobalt::destroy(swapchain);
     kobalt::destroy(device);

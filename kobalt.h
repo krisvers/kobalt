@@ -37,23 +37,32 @@ enum class ObjectType {
 
     Device,
 
+    VertexInputState,
+    TessellationState,
+    RasterizationState,
+    DepthStencilState,
+    BlendAttachmentState,
+    BlendState,
+
     RenderAttachmentState,
     RenderSubpass,
     RenderPass,
     Framebuffer,
 
+    PipelineResourcePool,
+    PipelineResourceSet,
+    PipelineResourceLayout,
+
     Shader,
-    VertexInputState,
-    RasterizationState,
     Pipeline,
 
     Buffer,
     BufferView,
     Texture,
     TextureView,
+    Sampler,
 
     CommandList,
-
     QueueSync,
     HostSync,
     StageSync,
@@ -85,8 +94,8 @@ KOBALT_HANDLE(RenderPass);
 KOBALT_HANDLE(Framebuffer);
 
 /* pipeline resources */
-KOBALT_HANDLE(PipelineResourcePool);
 KOBALT_HANDLE(PipelineResourceLayout);
+KOBALT_HANDLE(PipelineResourcePool);
 KOBALT_HANDLE(PipelineResourceSet);
 
 KOBALT_HANDLE(Shader);
@@ -591,9 +600,20 @@ struct DeviceAdapterInfo {
     uint32_t maxTextureSize1D;
     uint32_t maxTextureSize2D;
     uint32_t maxTextureSize3D;
+    uint32_t maxTextureLayers;
+
+    uint32_t sampledColorTextureSampleCountMask;
+    uint32_t sampledIntegerTextureSampleCountMask;
+    uint32_t sampledDepthTextureSampleCountMask;
+    uint32_t sampledStencilTextureSampleCountMask;
+    uint32_t storageTextureSampleCountMask;
 
     uint32_t maxRenderTargetSize[3];
     uint32_t maxRenderTargets;
+
+    uint32_t colorRenderTargetSampleCountMask;
+    uint32_t depthRenderTargetSampleCountMask;
+    uint32_t stencilRenderTargetSampleCountMask;
 
     uint32_t maxComputeWorkGroupCount[3];
     uint32_t maxComputeWorkGroupSize[3];
@@ -740,6 +760,7 @@ struct StencilOpState {
     CompareOp compareOp;
     uint32_t compareMask;
     uint32_t writeMask;
+    uint32_t reference;
 };
 
 struct BlendConstants {
@@ -1751,6 +1772,37 @@ inline TextureAspect maximumTextureAspectFromTextureFormat(TextureFormat format)
     return static_cast<TextureAspect>(0);
 }
 
+inline VkCompareOp compareOpToVkCompareOp(CompareOp op) {
+    switch (op) {
+        case CompareOp::Never:      return VK_COMPARE_OP_NEVER;
+        case CompareOp::Less:       return VK_COMPARE_OP_LESS;
+        case CompareOp::LEqual:     return VK_COMPARE_OP_LESS_OR_EQUAL;
+        case CompareOp::Equal:      return VK_COMPARE_OP_EQUAL;
+        case CompareOp::GEqual:     return VK_COMPARE_OP_GREATER_OR_EQUAL;
+        case CompareOp::Greater:    return VK_COMPARE_OP_GREATER;
+        case CompareOp::Always:     return VK_COMPARE_OP_ALWAYS;
+        default: break;
+    }
+
+    return VK_COMPARE_OP_MAX_ENUM;
+}
+
+inline VkStencilOp stencilOpToVkStencilOp(StencilOp op) {
+    switch (op) {
+        case StencilOp::Zero:       return VK_STENCIL_OP_ZERO;
+        case StencilOp::Keep:       return VK_STENCIL_OP_KEEP;
+        case StencilOp::Replace:    return VK_STENCIL_OP_REPLACE;
+        case StencilOp::IncClamp:   return VK_STENCIL_OP_INCREMENT_AND_CLAMP;
+        case StencilOp::DecClamp:   return VK_STENCIL_OP_DECREMENT_AND_CLAMP;
+        case StencilOp::Invert:     return VK_STENCIL_OP_INVERT;
+        case StencilOp::IncWrap:    return VK_STENCIL_OP_INCREMENT_AND_WRAP;
+        case StencilOp::DecWrap:    return VK_STENCIL_OP_DECREMENT_AND_WRAP;
+        default: break;
+    }
+
+    return VK_STENCIL_OP_MAX_ENUM;
+}
+
 enum class SurfaceType {
     GLFW
 };
@@ -1826,6 +1878,8 @@ struct DeviceSymbols {
 struct Device_t {
     ObjectBase_t base;
 
+    uint32_t id;
+
     VkDevice vkDevice;
     VkPhysicalDevice vkPhysicalDevice;
     
@@ -1835,10 +1889,12 @@ struct Device_t {
     DeviceSymbols symbols;
     DeviceQueues queues;
 
+    DeviceAdapterInfo adapterInfo;
+
     VkCommandPool vkTransferCommandPool;
     VkCommandBuffer vkTransferCommandBuffer;
 
-    Device_t(VkDevice vkDev, VkPhysicalDevice vkPhys, DeviceSupport const& support, ExtraDeviceFeatures const& extra, DeviceQueues const& qs, VkCommandPool vkTransferCommandPool, VkCommandBuffer vkTransferCommandBuffer) : base(nullptr, ObjectType::Device, vkDev), vkDevice(vkDev), vkPhysicalDevice(vkPhys), enabledSupport(support), extraFeatures(extra), queues(qs), vkTransferCommandPool(vkTransferCommandPool), vkTransferCommandBuffer(vkTransferCommandBuffer) {
+    Device_t(uint32_t id, VkDevice vkDev, VkPhysicalDevice vkPhys, DeviceSupport const& support, ExtraDeviceFeatures const& extra, DeviceQueues const& qs, VkCommandPool vkTransferCommandPool, VkCommandBuffer vkTransferCommandBuffer) : base(nullptr, ObjectType::Device, vkDev), id(id), vkDevice(vkDev), vkPhysicalDevice(vkPhys), enabledSupport(support), extraFeatures(extra), queues(qs), vkTransferCommandPool(vkTransferCommandPool), vkTransferCommandBuffer(vkTransferCommandBuffer) {
         vkGetDeviceQueue(vkDev, queues.graphicsFamily, 0, &queues.graphics);
         vkGetDeviceQueue(vkDev, queues.computeFamily, 0, &queues.compute);
         vkGetDeviceQueue(vkDev, queues.transferFamily, 0, &queues.transfer);
@@ -1846,6 +1902,8 @@ struct Device_t {
 
         symbols.vkCmdBeginRenderingKHR = reinterpret_cast<PFN_vkCmdBeginRenderingKHR>(vkGetDeviceProcAddr(vkDev, "vkCmdBeginRenderingKHR"));
         symbols.vkCmdEndRenderingKHR = reinterpret_cast<PFN_vkCmdEndRenderingKHR>(vkGetDeviceProcAddr(vkDev, "vkCmdEndRenderingKHR"));
+
+        enumerateDeviceAdapters(adapterInfo, id);
     }
 
     ~Device_t() {
@@ -1860,6 +1918,7 @@ struct Texture_t {
 
     Device_t* device;
     VkImage vkImage = nullptr;
+    VkDeviceMemory vkDeviceMemory = nullptr;
 
     TextureFormat format;
     TextureUsage usage;
@@ -1875,13 +1934,14 @@ struct Texture_t {
 
     kobalt::wsi::Swapchain swapchain = nullptr;
 
-    Texture_t(Device_t* device, VkImage vkImage, TextureFormat format, TextureUsage usage, TextureDimensions dimensions, MemoryLocation location, uint32_t width, uint32_t height, uint32_t depth, uint32_t layerCount, uint32_t samples, uint32_t mipCount) : base(&device->base.obj, internal::ObjectType::Texture, vkImage), device(device), vkImage(vkImage), format(format), usage(usage), dimensions(dimensions), location(location), width(width), height(height), depth(depth), layerCount(layerCount), samples(samples), mipCount(mipCount) {}
+    Texture_t(Device_t* device, VkImage vkImage, VkDeviceMemory vkDeviceMemory, TextureFormat format, TextureUsage usage, TextureDimensions dimensions, MemoryLocation location, uint32_t width, uint32_t height, uint32_t depth, uint32_t layerCount, uint32_t samples, uint32_t mipCount) : base(&device->base.obj, internal::ObjectType::Texture, vkImage), device(device), vkImage(vkImage), vkDeviceMemory(vkDeviceMemory), format(format), usage(usage), dimensions(dimensions), location(location), width(width), height(height), depth(depth), layerCount(layerCount), samples(samples), mipCount(mipCount) {}
     Texture_t(Device_t* device, kobalt::wsi::Swapchain swapchain, TextureFormat format, TextureUsage usage, TextureDimensions dimensions, MemoryLocation location, uint32_t width, uint32_t height, uint32_t depth, uint32_t layerCount, uint32_t samples, uint32_t mipCount) : base(&device->base.obj, internal::ObjectType::Unknown, nullptr), device(device), swapchain(swapchain), format(format), usage(usage), dimensions(dimensions), location(location), width(width), height(height), depth(depth), layerCount(layerCount), samples(samples), mipCount(mipCount) {}
 
     ~Texture_t() {
         if (swapchain == nullptr) {
             vkDeviceWaitIdle(device->vkDevice);
             vkDestroyImage(device->vkDevice, vkImage, nullptr);
+            vkFreeMemory(device->vkDevice, vkDeviceMemory, nullptr);
         }
     }
 };
@@ -1905,7 +1965,7 @@ struct TextureView_t {
     TextureView_t(Device_t* device, kobalt::wsi::Swapchain swapchain, Texture_t* texture, uint32_t swapchainInternalViewIndex, TextureFormat format, TextureDimensions dimensions) : base(&device->base.obj, ObjectType::TextureView, nullptr), device(device), texture(texture), swapchain(swapchain), swapchainInternalViewIndex(swapchainInternalViewIndex), vkImage(nullptr), vkImageView(nullptr), format(format), dimensions(dimensions) {}
 
     ~TextureView_t() {
-        if (swapchain != nullptr) {
+        if (swapchain == nullptr) {
             vkDestroyImageView(device->vkDevice, vkImageView, nullptr);
         }
     }
@@ -1997,6 +2057,46 @@ struct RasterizationState_t {
         createInfo.depthBiasClamp = depthBiasClamp;
         createInfo.depthBiasSlopeFactor = slopeScaledDepthBias;
         createInfo.lineWidth = 1.0f;
+    }
+};
+
+struct DepthStencilState_t {
+    ObjectBase_t base;
+
+    VkPipelineDepthStencilStateCreateInfo createInfo = {};
+
+    DepthStencilState_t(Device device, bool testDepth, bool writeDepth, CompareOp depthCompareOp, bool testStencil, StencilOpState const& frontStencil, StencilOpState const& backStencil) : base(device, ObjectType::DepthStencilState, nullptr) {
+        createInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
+        createInfo.depthTestEnable = testDepth;
+        createInfo.depthWriteEnable = writeDepth;
+        createInfo.depthCompareOp = internal::compareOpToVkCompareOp(depthCompareOp);
+        createInfo.depthBoundsTestEnable = false;
+        createInfo.stencilTestEnable = testStencil;
+        createInfo.front.failOp = internal::stencilOpToVkStencilOp(frontStencil.failOp);
+        createInfo.front.passOp = internal::stencilOpToVkStencilOp(frontStencil.passOp);
+        createInfo.front.depthFailOp = internal::stencilOpToVkStencilOp(frontStencil.depthFailOp);
+        createInfo.front.compareMask = frontStencil.compareMask;
+        createInfo.front.writeMask = frontStencil.writeMask;
+        createInfo.front.reference = frontStencil.reference;
+        createInfo.back.failOp = internal::stencilOpToVkStencilOp(backStencil.failOp);
+        createInfo.back.passOp = internal::stencilOpToVkStencilOp(backStencil.passOp);
+        createInfo.back.depthFailOp = internal::stencilOpToVkStencilOp(backStencil.depthFailOp);
+        createInfo.back.compareMask = backStencil.compareMask;
+        createInfo.back.writeMask = backStencil.writeMask;
+        createInfo.back.reference = backStencil.reference;
+        createInfo.minDepthBounds = 0.0f;
+        createInfo.maxDepthBounds = 1.0f;
+    }
+    
+    DepthStencilState_t(Device device, bool testDepth, bool writeDepth, CompareOp depthCompareOp) : base(device, ObjectType::DepthStencilState, nullptr) {
+        createInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
+        createInfo.depthTestEnable = testDepth;
+        createInfo.depthWriteEnable = writeDepth;
+        createInfo.depthCompareOp = internal::compareOpToVkCompareOp(depthCompareOp);
+        createInfo.depthBoundsTestEnable = false;
+        createInfo.stencilTestEnable = false;
+        createInfo.minDepthBounds = 0.0f;
+        createInfo.maxDepthBounds = 1.0f;
     }
 };
 
@@ -2674,8 +2774,10 @@ void destroy(Object_t* object) {
         KOBALT_INTERNAL_DESTROY_OBJ(object, Shader);
         KOBALT_INTERNAL_DESTROY_OBJ(object, VertexInputState);
         KOBALT_INTERNAL_DESTROY_OBJ(object, RasterizationState);
+        KOBALT_INTERNAL_DESTROY_OBJ(object, DepthStencilState);
         KOBALT_INTERNAL_DESTROY_OBJ(object, Pipeline);
         KOBALT_INTERNAL_DESTROY_OBJ(object, Buffer);
+        KOBALT_INTERNAL_DESTROY_OBJ(object, Texture);
         KOBALT_INTERNAL_DESTROY_OBJ(object, CommandList);
         KOBALT_INTERNAL_DESTROY_OBJ(object, QueueSync);
         KOBALT_INTERNAL_DESTROY_OBJ(object, HostSync);
@@ -2761,22 +2863,38 @@ bool enumerateDeviceAdapters(DeviceAdapterInfo& adapterInfo, uint32_t id) {
         return false;
     }
 
+    adapterInfo.support = {};
     for (VkExtensionProperties const& e : availableExtensions) {
-        if (strcmp(e.extensionName, VK_KHR_DYNAMIC_RENDERING_EXTENSION_NAME) == 0) {
-            adapterInfo.support.dynamicRenderPass = true;
-        } else if (strcmp(e.extensionName, VK_KHR_SWAPCHAIN_EXTENSION_NAME) == 0) {
+        if (strcmp(e.extensionName, VK_KHR_SWAPCHAIN_EXTENSION_NAME) == 0) {
             adapterInfo.support.swapchain = true;
+        } else if (strcmp(e.extensionName, VK_KHR_MAINTENANCE1_EXTENSION_NAME) == 0) {
+            adapterInfo.support.flipViewport = true;
+        } else if(strcmp(e.extensionName, VK_KHR_DYNAMIC_RENDERING_EXTENSION_NAME) == 0) {
+            adapterInfo.support.dynamicRenderPass = true;
+        } else if(strcmp(e.extensionName, VK_KHR_PUSH_DESCRIPTOR_EXTENSION_NAME) == 0) {
+            adapterInfo.support.dynamicPipelineResources = true;
         }
     }
 
     adapterInfo.maxTextureSize1D = props.limits.maxImageDimension1D;
     adapterInfo.maxTextureSize2D = props.limits.maxImageDimension2D;
     adapterInfo.maxTextureSize3D = props.limits.maxImageDimension3D;
+    adapterInfo.maxTextureLayers = props.limits.maxImageArrayLayers;
+
+    adapterInfo.sampledColorTextureSampleCountMask = props.limits.sampledImageColorSampleCounts;
+    adapterInfo.sampledIntegerTextureSampleCountMask = props.limits.sampledImageIntegerSampleCounts;
+    adapterInfo.sampledDepthTextureSampleCountMask = props.limits.sampledImageDepthSampleCounts;
+    adapterInfo.sampledStencilTextureSampleCountMask = props.limits.sampledImageStencilSampleCounts;
+    adapterInfo.storageTextureSampleCountMask = props.limits.storageImageSampleCounts;
 
     adapterInfo.maxRenderTargetSize[0] = props.limits.maxFramebufferWidth;
     adapterInfo.maxRenderTargetSize[1] = props.limits.maxFramebufferHeight;
     adapterInfo.maxRenderTargetSize[2] = props.limits.maxFramebufferLayers;
     adapterInfo.maxRenderTargets = props.limits.maxColorAttachments;
+
+    adapterInfo.colorRenderTargetSampleCountMask = props.limits.framebufferColorSampleCounts;
+    adapterInfo.depthRenderTargetSampleCountMask = props.limits.framebufferDepthSampleCounts;
+    adapterInfo.stencilRenderTargetSampleCountMask = props.limits.framebufferStencilSampleCounts;
 
     adapterInfo.maxComputeWorkGroupCount[0] = props.limits.maxComputeWorkGroupCount[0];
     adapterInfo.maxComputeWorkGroupCount[1] = props.limits.maxComputeWorkGroupCount[1];
@@ -3003,7 +3121,7 @@ bool createDevice(Device& device, uint32_t id, DeviceSupport support) {
         return false;
     }
 
-    internal::Device_t* dev = new internal::Device_t(vkDevice, vkPhysical, support, extraSupport, internal::DeviceQueues(bestGraphics, graphicsTypes, bestCompute, computeTypes, bestTransfer, transferTypes, bestGeneral, generalTypes), vkTransferCommandPool, vkTransferCommandBuffer);
+    internal::Device_t* dev = new internal::Device_t(id, vkDevice, vkPhysical, support, extraSupport, internal::DeviceQueues(bestGraphics, graphicsTypes, bestCompute, computeTypes, bestTransfer, transferTypes, bestGeneral, generalTypes), vkTransferCommandPool, vkTransferCommandBuffer);
     device = &dev->base.obj;
     return true;
 }
@@ -3344,6 +3462,38 @@ bool createRasterizationState(RasterizationState& rasterizationState, Device dev
     return true;
 }
 
+bool createDepthStencilState(DepthStencilState& depthStencilState, Device device, bool testDepth, bool writeDepth, CompareOp depthCompareOp, bool testStencil, StencilOpState const* frontStencil, StencilOpState const* backStencil) {
+    if (device == nullptr) {
+        KOBALT_PRINT(DebugSeverity::Error, nullptr, "device is null");
+        return false;
+    }
+
+    if (internal::compareOpToVkCompareOp(depthCompareOp) == VK_COMPARE_OP_MAX_ENUM) {
+        KOBALT_PRINTF(DebugSeverity::Error, device, "depthCompareOp has invalid value: %u", static_cast<uint32_t>(depthCompareOp));
+        return false;
+    }
+
+    if (testStencil && frontStencil == nullptr) {
+        KOBALT_PRINT(DebugSeverity::Error, device, "if testStencil is enabled, frontStencil must be a valid pointer");
+        return false;
+    }
+
+    if (testStencil && backStencil == nullptr) {
+        KOBALT_PRINT(DebugSeverity::Error, device, "if testStencil is enabled, backStencil must be a valid pointer");
+        return false;
+    }
+
+    internal::DepthStencilState_t* dss;
+    if (testStencil) {
+        dss = new internal::DepthStencilState_t(device, testDepth, writeDepth, depthCompareOp, true, *frontStencil, *backStencil);
+    } else {
+        dss = new internal::DepthStencilState_t(device, testDepth, writeDepth, depthCompareOp);
+    }
+
+    depthStencilState = &dss->base.obj;
+    return true;
+}
+
 bool createGraphicsPipeline(Pipeline& pipeline, Device device, VertexInputState vertexInputState, TessellationState tessellationState, RasterizationState rasterizationState, DepthStencilState depthStencilState, BlendState blendState, PipelineShader const* vertexShader, PipelineShader const* tessControlShader, PipelineShader const* tessEvalShader, PipelineShader const* geometryShader, PipelineShader const* fragmentShader, PipelineResourceLayout layout, GraphicsPipelineAttachment const* inputAttachments, uint32_t inputAttachmentCount, GraphicsPipelineAttachment const* renderTargets, uint32_t renderTargetCount, GraphicsPipelineAttachment const* depthStencilTarget, uint32_t subpass, bool dynamicRenderPass, uint32_t viewMask) {
     if (device == nullptr) {
         KOBALT_PRINT(DebugSeverity::Error, nullptr, "device is null");
@@ -3486,7 +3636,7 @@ bool createGraphicsPipeline(Pipeline& pipeline, Device device, VertexInputState 
     internal::VertexInputState_t* internalVertexInputState = reinterpret_cast<internal::VertexInputState_t*>(vertexInputState);
     /* TODO: internal::TessellationState_t* internalTessellationState = reinterpret_cast<internal::TessellationState_t*>(tessellationState); */
     internal::RasterizationState_t* internalRasterizationState = reinterpret_cast<internal::RasterizationState_t*>(rasterizationState);
-    /* TODO: internal::DepthStencilState_t* internalDepthStencilState = reinterpret_cast<internal::DepthStencilState_t*>(depthStencilState); */
+    internal::DepthStencilState_t* internalDepthStencilState = reinterpret_cast<internal::DepthStencilState_t*>(depthStencilState);
     /* TODO: internal::BlendState_t* internalBlendState = reinterpret_cast<internal::BlendState_t*>(blendState); */
 
     VkFormat* pRtFormats = nullptr;
@@ -3518,6 +3668,12 @@ bool createGraphicsPipeline(Pipeline& pipeline, Device device, VertexInputState 
     renderingCI.depthAttachmentFormat = VK_FORMAT_UNDEFINED;
     renderingCI.stencilAttachmentFormat = VK_FORMAT_UNDEFINED;
 
+    VkPipelineDepthStencilStateCreateInfo defaultDepthStencilState = {};
+    defaultDepthStencilState.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
+    defaultDepthStencilState.depthCompareOp = VK_COMPARE_OP_ALWAYS;
+    defaultDepthStencilState.minDepthBounds = 0.0f;
+    defaultDepthStencilState.maxDepthBounds = 1.0f;
+
     if (depthStencilTarget != nullptr) {
         if (internal::textureFormatToVkFormat(depthStencilTarget->format) == VK_FORMAT_MAX_ENUM) {
             KOBALT_PRINTF(DebugSeverity::Error, device, "depthStencilTarget->format has invalid value: %u", static_cast<uint32_t>(depthStencilTarget->format));
@@ -3536,6 +3692,14 @@ bool createGraphicsPipeline(Pipeline& pipeline, Device device, VertexInputState 
 
         if ((aspect & TextureAspect::Stencil) == TextureAspect::Stencil) {
             renderingCI.stencilAttachmentFormat = internal::textureFormatToVkFormat(depthStencilTarget->format);
+        }
+
+        if (depthStencilState == nullptr) {
+            KOBALT_PRINT(DebugSeverity::Warning, device, "using depthStencilTarget without a valid depthStencilState defaults to testing and writing depth and less compare operation; it's recommended to use a valid depthStencilState over default");
+
+            defaultDepthStencilState.depthTestEnable = true;
+            defaultDepthStencilState.depthWriteEnable = true;
+            defaultDepthStencilState.depthCompareOp = VK_COMPARE_OP_LESS;
         }
     }
 
@@ -3565,7 +3729,7 @@ bool createGraphicsPipeline(Pipeline& pipeline, Device device, VertexInputState 
     graphicsPipelineCI.pViewportState = &viewportCI;
     graphicsPipelineCI.pRasterizationState = internalRasterizationState == nullptr ? &defaultRasterizationCI : &internalRasterizationState->createInfo;
     graphicsPipelineCI.pMultisampleState = /* TODO: */ &defaultMultisampleCI;
-    graphicsPipelineCI.pDepthStencilState = /* TODO: */ nullptr;
+    graphicsPipelineCI.pDepthStencilState = internalDepthStencilState == nullptr ? (depthStencilTarget ? &defaultDepthStencilState : nullptr) : &internalDepthStencilState->createInfo;
     graphicsPipelineCI.pColorBlendState = /* TODO: */ &defaultBlendCI;
     graphicsPipelineCI.pDynamicState = &dynamicCI;
     graphicsPipelineCI.layout = vkPipelineLayout;
@@ -3747,6 +3911,151 @@ void unmapBuffer(Buffer buffer, void* pointer) {
 
     internal::Buffer_t* buf = reinterpret_cast<internal::Buffer_t*>(buffer);
     vkUnmapMemory(buf->device->vkDevice, buf->vkMemory);
+}
+
+bool createTexture(Texture& texture, Device device, TextureDimensions dimensions, uint32_t width, uint32_t height, uint32_t depth, uint32_t layerCount, uint32_t mipCount, uint32_t samples, TextureFormat format, MemoryLocation location, TextureUsage usage) {
+    if (device == nullptr) {
+        KOBALT_PRINT(DebugSeverity::Error, nullptr, "texture is null");
+        return false;
+    }
+
+    if (internal::textureDimensionsToVkImageType(dimensions) == VK_IMAGE_TYPE_MAX_ENUM) {
+        KOBALT_PRINTF(DebugSeverity::Error, device, "dimensions has invalid value: %u", static_cast<uint32_t>(dimensions));
+        return false;
+    }
+
+    if (internal::textureFormatToVkFormat(format) == VK_FORMAT_MAX_ENUM) {
+        KOBALT_PRINTF(DebugSeverity::Error, device, "format has invalid value: %u", static_cast<uint32_t>(format));
+        return false;
+    }
+
+    if (internal::memoryLocationToVkMemoryPropertyFlags(location) == VK_MEMORY_PROPERTY_FLAG_BITS_MAX_ENUM) {
+        KOBALT_PRINTF(DebugSeverity::Error, device, "location has invalid value: %u", static_cast<uint32_t>(location));
+        return false;
+    }
+
+    if (internal::textureUsageToVkImageUsageFlags(usage) == VK_IMAGE_USAGE_FLAG_BITS_MAX_ENUM) {
+        KOBALT_PRINTF(DebugSeverity::Error, device, "usage has invalid value: %u", static_cast<uint32_t>(usage));
+        return false;
+    }
+
+    internal::Device_t* dev = reinterpret_cast<internal::Device_t*>(device);
+    switch (dimensions) {
+        case TextureDimensions::Texture1D:
+            if (width > dev->adapterInfo.maxTextureSize1D) {
+                KOBALT_PRINTF(DebugSeverity::Error, device, "width (%u) is larger than maximum width (%u)", width, dev->adapterInfo.maxTextureSize1D);
+                return false;
+            }
+            break;
+        case TextureDimensions::Texture2D:
+            if (width > dev->adapterInfo.maxTextureSize2D) {
+                KOBALT_PRINTF(DebugSeverity::Error, device, "width (%u) is larger than maximum width (%u)", width, dev->adapterInfo.maxTextureSize2D);
+                return false;
+            } else if (height > dev->adapterInfo.maxTextureSize2D) {
+                KOBALT_PRINTF(DebugSeverity::Error, device, "height (%u) is larger than maximum height (%u)", height, dev->adapterInfo.maxTextureSize2D);
+                return false;
+            }
+            break;
+        case TextureDimensions::Texture3D:
+            if (width > dev->adapterInfo.maxTextureSize3D) {
+                KOBALT_PRINTF(DebugSeverity::Error, device, "width (%u) is larger than maximum width (%u)", width, dev->adapterInfo.maxTextureSize3D);
+                return false;
+            } else if (height > dev->adapterInfo.maxTextureSize3D) {
+                KOBALT_PRINTF(DebugSeverity::Error, device, "height (%u) is larger than maximum height (%u)", height, dev->adapterInfo.maxTextureSize3D);
+                return false;
+            } else if (depth > dev->adapterInfo.maxTextureSize3D) {
+                KOBALT_PRINTF(DebugSeverity::Error, device, "depth (%u) is larger than maximum depth (%u)", depth, dev->adapterInfo.maxTextureSize3D);
+                return false;
+            }
+            break;
+        case TextureDimensions::Array1D:
+            if (width > dev->adapterInfo.maxTextureSize1D) {
+                KOBALT_PRINTF(DebugSeverity::Error, device, "width (%u) is larger than maximum width (%u)", width, dev->adapterInfo.maxTextureSize1D);
+                return false;
+            } else if (layerCount > dev->adapterInfo.maxTextureLayers) {
+                KOBALT_PRINTF(DebugSeverity::Error, device, "layerCount (%u) is larger than maximum layerCount (%u)", layerCount, dev->adapterInfo.maxTextureLayers);
+                return false;
+            }
+            break;
+        case TextureDimensions::Array2D:
+            if (width > dev->adapterInfo.maxTextureSize2D) {
+                KOBALT_PRINTF(DebugSeverity::Error, device, "width (%u) is larger than maximum width (%u)", width, dev->adapterInfo.maxTextureSize2D);
+                return false;
+            } else if (height > dev->adapterInfo.maxTextureSize2D) {
+                KOBALT_PRINTF(DebugSeverity::Error, device, "height (%u) is larger than maximum height (%u)", height, dev->adapterInfo.maxTextureSize2D);
+                return false;
+            } else if (layerCount > dev->adapterInfo.maxTextureLayers) {
+                KOBALT_PRINTF(DebugSeverity::Error, device, "layerCount (%u) is larger than maximum layerCount (%u)", layerCount, dev->adapterInfo.maxTextureLayers);
+                return false;
+            }
+            break;
+    }
+
+    if (samples != 0 && (samples & (samples - 1)) != 0) {
+        KOBALT_PRINTF(DebugSeverity::Error, device, "samples has invalid value: %u; must be a power of two", samples);
+        return false;
+    }
+
+    TextureAspect maxAspect = internal::maximumTextureAspectFromTextureFormat(format);
+    uint32_t colorSampleMask = dev->adapterInfo.sampledColorTextureSampleCountMask;
+    uint32_t depthSampleMask = dev->adapterInfo.sampledDepthTextureSampleCountMask;
+    uint32_t stencilSampleMask = dev->adapterInfo.sampledStencilTextureSampleCountMask;
+    uint32_t mask = UINT32_MAX;
+
+    if ((maxAspect & TextureAspect::Color) == TextureAspect::Color) {
+        mask &= colorSampleMask;
+    }
+
+    if ((maxAspect & TextureAspect::Depth) == TextureAspect::Depth) {
+        mask &= depthSampleMask;
+    }
+
+    if ((maxAspect & TextureAspect::Stencil) == TextureAspect::Stencil) {
+        mask &= stencilSampleMask;
+    }
+
+    if ((mask & samples) != samples) {
+        KOBALT_PRINTF(DebugSeverity::Error, device, "samples mask %u is not supported for format %u", samples, static_cast<uint32_t>(format));
+        return false;
+    }
+
+    VkImageCreateInfo imageCI = {};
+    imageCI.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+    imageCI.imageType = internal::textureDimensionsToVkImageType(dimensions);
+    imageCI.format = internal::textureFormatToVkFormat(format);
+    imageCI.extent.width = width;
+    imageCI.extent.height = height == 0 ? 1 : height;
+    imageCI.extent.depth = depth == 0 ? 1 : depth;
+    imageCI.mipLevels = mipCount;
+    imageCI.arrayLayers = layerCount == 0 ? 1 : layerCount;
+    imageCI.samples = static_cast<VkSampleCountFlagBits>(samples);
+    imageCI.tiling = VK_IMAGE_TILING_OPTIMAL;
+    imageCI.usage = internal::textureUsageToVkImageUsageFlags(usage);
+    imageCI.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+    imageCI.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+
+    VkImage vkImage;
+    if (vkCreateImage(dev->vkDevice, &imageCI, nullptr, &vkImage) != VK_SUCCESS) {
+        KOBALT_PRINT(DebugSeverity::Error, device, "internal Vulkan error; failed to create image");
+        return false;
+    }
+
+    VkDeviceMemory vkDeviceMemory;
+    if (!prism::vk::allocateImageSimple(dev->vkDevice, dev->vkPhysicalDevice, vkImage, internal::memoryLocationToVkMemoryPropertyFlags(location), nullptr, vkDeviceMemory)) {
+        KOBALT_PRINT(DebugSeverity::Error, device, "internal Vulkan error; failed to allocate image memory");
+        vkDestroyImage(dev->vkDevice, vkImage, nullptr);
+        return false;
+    }
+
+    if (vkBindImageMemory(dev->vkDevice, vkImage, vkDeviceMemory, 0) != VK_SUCCESS) {
+        KOBALT_PRINT(DebugSeverity::Error, device, "internal Vulkan error; failed to allocate image memory");
+        vkFreeMemory(dev->vkDevice, vkDeviceMemory, nullptr);
+        vkDestroyImage(dev->vkDevice, vkImage, nullptr);
+        return false;
+    }
+
+    texture = &(new internal::Texture_t(dev, vkImage, vkDeviceMemory, format, usage, dimensions, location, width, height, depth, layerCount, samples, mipCount))->base.obj;
+    return true;
 }
 
 bool createTextureView(TextureView& view, Texture texture, TextureFormat format, TextureDimensions dimensions, ComponentMapping const* mapping, TextureSubresource const* subresource) {

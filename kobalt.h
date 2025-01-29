@@ -874,11 +874,15 @@ bool allocatePipelineResourceSets(PipelineResourceSet* sets, PipelineResourceLay
 bool updatePipelineResourceSet(PipelineResourceSet set, PipelineResourceTexture const* textures, uint32_t textureCount, PipelineResourceBuffer const* buffers, uint32_t bufferCount, PipelineResourceTexelBuffer const* texelBuffers, uint32_t texelBufferCount);
 
 bool createGraphicsPipeline(Pipeline& pipeline, Device device, VertexInputState vertexInputState, TessellationState tessellationState, RasterizationState rasterizationState, DepthStencilState depthStencilState, BlendState blendState, PipelineShader const* vertexShader, PipelineShader const* tessControlShader, PipelineShader const* tessEvalShader, PipelineShader const* geometryShader, PipelineShader const* fragmentShader, PipelineResourceLayout layout, GraphicsPipelineAttachment const* inputAttachments, uint32_t inputAttachmentCount, GraphicsPipelineAttachment const* renderTargets, uint32_t renderTargetCount, GraphicsPipelineAttachment const* depthStencilTarget, uint32_t subpass, bool dynamicRenderPass, uint32_t viewMask);
+/* TODO: */ bool createComputePipeline();
+
 bool storePipeline(Pipeline pipeline, void* data, uint64_t* size);
 bool loadPipeline(Pipeline& pipeline, void* data, uint64_t size);
 
 /* resources */
 bool createBuffer(Buffer& buffer, Device device, uint64_t size, MemoryLocation location, BufferUsage usage);
+/* TODO: */ bool createBufferView();
+
 bool uploadBufferData(Buffer buffer, uint64_t offset, void const* data, uint64_t size);
 bool downloadBufferData(Buffer buffer, uint64_t offset, void* data, uint64_t size);
 bool copyBuffer(Buffer srcBuffer, uint64_t srcOffset, Buffer dstBuffer, uint64_t dstOffset, uint64_t size, HostSync signalHostSync, QueueSync const* signalQueueSyncs, uint32_t signalQueueSyncCount);
@@ -887,6 +891,14 @@ void unmapBuffer(Buffer buffer, void* pointer);
 
 bool createTexture(Texture& texture, Device device, TextureDimensions dimensions, uint32_t width, uint32_t height, uint32_t depth, uint32_t layerCount, uint32_t mipCount, uint32_t samples, TextureFormat format, MemoryLocation location, TextureUsage usage);
 bool createTextureView(TextureView& view, Texture texture, TextureFormat format, TextureDimensions dimensions, ComponentMapping const* mapping, TextureSubresource const* subresource);
+
+/* TODO: */
+bool uploadTextureData();
+bool downloadTextureData();
+bool copyTexture();
+
+bool copyTextureFromBuffer();
+bool copyBufferFromTexture();
 
 /* command list */
 bool createCommandList(CommandList& commandList, Device device, QueueType queueType, bool isSecondary);

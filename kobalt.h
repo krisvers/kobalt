@@ -445,6 +445,8 @@ enum class TextureUsage {
     RenderTarget = 0x4,
     DepthTarget = 0x8,
     StencilTarget = 0x10,
+    TransferSrc = 0x20,
+    TransferDst = 0x40,
 };
 
 KOBALT_ENUM_BITMASK(TextureUsage);
@@ -566,6 +568,17 @@ enum class PipelineStage {
 };
 
 KOBALT_ENUM_BITMASK(PipelineStage);
+
+enum class SampleFilter {
+    Nearest,
+    Linear,
+};
+
+enum class SampleMode {
+    Repeat,
+    MirroredRepeat,
+    Clamp,
+};
 
 struct DeviceSupport {
     bool swapchain;
@@ -722,10 +735,13 @@ struct PipelinePushConstantRange {
     uint32_t size;
 };
 
-struct PipelineResourceTexture {
+struct PipelineResourceTextureSampler {
     uint32_t binding;
     uint32_t elementBase;
     uint32_t elementCount;
+
+    PipelineResourceType type;
+    PipelineResourceAccess access;
     
     Sampler sampler;
     TextureView view;
@@ -737,6 +753,9 @@ struct PipelineResourceBuffer {
     uint32_t elementBase;
     uint32_t elementCount;
 
+    PipelineResourceType type;
+    PipelineResourceAccess access;
+
     Buffer buffer;
     uint64_t offset;
     uint64_t range;
@@ -746,6 +765,9 @@ struct PipelineResourceTexelBuffer {
     uint32_t binding;
     uint32_t elementBase;
     uint32_t elementCount;
+
+    PipelineResourceType type;
+    PipelineResourceAccess access;
 
     BufferView view;
 };
@@ -870,11 +892,11 @@ bool createBlendAttachmentState(BlendAttachmentState& blendAttachmentState, Devi
 bool createBlendState(BlendState& blendState, Device device, BlendAttachmentState const* attachments, uint32_t attachmentCount, bool logicOpEnable, LogicOp logicOp, BlendConstants const* constants);
 
 /* pipeline resources */
-bool createPipelineResourceLayout(PipelineResourceLayout& layout, Device device, PipelineResourceBinding const* bindings, uint32_t bindingCount, PipelinePushConstantRange const* pushConstantRanges, uint32_t pushConstantCount);
+bool createPipelineResourceLayout(PipelineResourceLayout& layout, Device device, PipelineResourceBinding const* bindings, uint32_t bindingCount, PipelinePushConstantRange const* pushConstantRanges, uint32_t pushConstantCount, bool dynamic);
 bool createPipelineResourcePool(PipelineResourcePool& pool, uint32_t maxSets, PipelineResourceAllocationLimit const* resourceLimits, uint32_t resourceLimitCount, bool dynamicUpdate);
 bool allocatePipelineResourceSet(PipelineResourceSet& set, PipelineResourceLayout layout, PipelineResourcePool pool);
 bool allocatePipelineResourceSets(PipelineResourceSet* sets, PipelineResourceLayout const* layouts, uint32_t setCount, PipelineResourcePool pool);
-bool updatePipelineResourceSet(PipelineResourceSet set, PipelineResourceTexture const* textures, uint32_t textureCount, PipelineResourceBuffer const* buffers, uint32_t bufferCount, PipelineResourceTexelBuffer const* texelBuffers, uint32_t texelBufferCount);
+bool updatePipelineResourceSet(PipelineResourceSet set, PipelineResourceTextureSampler const* textures, uint32_t textureCount, PipelineResourceBuffer const* buffers, uint32_t bufferCount, PipelineResourceTexelBuffer const* texelBuffers, uint32_t texelBufferCount);
 
 bool createGraphicsPipeline(Pipeline& pipeline, Device device, VertexInputState vertexInputState, TessellationState tessellationState, RasterizationState rasterizationState, DepthStencilState depthStencilState, BlendState blendState, PipelineShader const* vertexShader, PipelineShader const* tessControlShader, PipelineShader const* tessEvalShader, PipelineShader const* geometryShader, PipelineShader const* fragmentShader, PipelineResourceLayout const* layouts, uint32_t layoutCount, GraphicsPipelineAttachment const* inputAttachments, uint32_t inputAttachmentCount, GraphicsPipelineAttachment const* renderTargets, uint32_t renderTargetCount, GraphicsPipelineAttachment const* depthStencilTarget, uint32_t subpass, bool dynamicRenderPass, uint32_t viewMask);
 /* TODO: */ bool createComputePipeline();
@@ -895,12 +917,14 @@ void unmapBuffer(Buffer buffer, void* pointer);
 bool createTexture(Texture& texture, Device device, TextureDimensions dimensions, uint32_t width, uint32_t height, uint32_t depth, uint32_t layerCount, uint32_t mipCount, uint32_t samples, TextureFormat format, MemoryLocation location, TextureUsage usage);
 bool createTextureView(TextureView& view, Texture texture, TextureFormat format, TextureDimensions dimensions, ComponentMapping const* mapping, TextureSubresource const* subresource);
 
+bool createSampler(Sampler& sampler, Device device, SampleFilter minFilter, SampleFilter magFilter, SampleFilter mipmapFilter, SampleMode sampleModeU, SampleMode sampleModeV, SampleMode sampleModeW, float anisotropy, float minLod, float maxLod);
+
 /* TODO: */
 bool uploadTextureData();
 bool downloadTextureData();
 bool copyTexture();
 
-bool copyTextureFromBuffer();
+bool copyTextureFromBuffer(Buffer srcBuffer, uint64_t srcOffset, uint32_t srcExtraWidth, uint32_t srcExtraHeight, Texture dstTexture, TextureLayout dstLayout, uint32_t dstOffsetX, uint32_t dstOffsetY, uint32_t dstOffsetZ, uint32_t dstWidth, uint32_t dstHeight, uint32_t dstDepth, TextureSubresource const* dstSubresource, HostSync signalHostSync, QueueSync const* signalQueueSyncs, uint32_t signalQueueSyncCount);
 bool copyBufferFromTexture();
 
 /* command list */
@@ -939,7 +963,7 @@ bool textureBarrier(CommandList commandList, ResourceAccess srcAccess, ResourceA
 bool bufferBarrier(CommandList commandList, ResourceAccess srcAccess, ResourceAccess dstAccess, QueueTransfer srcQueue, QueueTransfer dstQueue, Buffer buffer, uint64_t offset, uint64_t size);
 
 /* binding */
-bool bindGraphicsPipeline(CommandList commandList, Pipeline pipeline);
+bool bindPipeline(CommandList commandList, Pipeline pipeline);
 bool bindVertexBuffer(CommandList commandList, uint32_t index, Buffer buffer, uint64_t offset);
 bool bindIndexBuffer(CommandList commandList, Buffer buffer, uint64_t offset);
 
@@ -954,7 +978,7 @@ bool copyBuffer(CommandList commandList, Buffer srcBuffer, uint64_t srcOffset, B
 
 /* pipeline */
 bool pushConstants(CommandList commandList, ShaderStage stages, uint32_t offset, uint32_t size, void const* values);
-bool pushDynamicPipelineResources(CommandList commandList, uint32_t set, PipelineResourceTexture const* textures, uint32_t textureCount, PipelineResourceBuffer const* buffers, uint32_t bufferCount, PipelineResourceTexelBuffer const* texelBuffers, uint32_t texelBufferCount);
+bool pushDynamicPipelineResources(CommandList commandList, Pipeline pipeline, uint32_t set, PipelineResourceTextureSampler const* textures, uint32_t textureCount, PipelineResourceBuffer const* buffers, uint32_t bufferCount, PipelineResourceTexelBuffer const* texelBuffers, uint32_t texelBufferCount);
 bool setViewport(CommandList commandList, float x, float y, float width, float height, float nearDepth, float farDepth);
 bool setScissor(CommandList commandList, uint32_t x, uint32_t y, uint32_t width, uint32_t height);
 
@@ -1535,6 +1559,14 @@ inline VkImageUsageFlags textureUsageToVkImageUsageFlags(TextureUsage usage) {
         flags |= VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
     }
 
+    if ((usage & TextureUsage::TransferSrc) == TextureUsage::TransferSrc) {
+        flags |= VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
+    }
+
+    if ((usage & TextureUsage::TransferDst) == TextureUsage::TransferDst) {
+        flags |= VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+    }
+
     return flags;
 }
 
@@ -1838,6 +1870,37 @@ inline VkAccessFlags resourceAccessToVkAccessFlags(ResourceAccess access) {
     return flags;
 }
 
+inline VkSamplerAddressMode sampleModeToVkSamplerAddressMode(SampleMode mode) {
+    switch (mode) {
+        case SampleMode::Repeat:            return VK_SAMPLER_ADDRESS_MODE_REPEAT;
+        case SampleMode::MirroredRepeat:    return VK_SAMPLER_ADDRESS_MODE_MIRRORED_REPEAT;
+        case SampleMode::Clamp:             return VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE; \
+        default: break;
+    }
+
+    return VK_SAMPLER_ADDRESS_MODE_MAX_ENUM;
+}
+
+inline VkFilter sampleFilterToVkFilter(SampleFilter filter) {
+    switch (filter) {
+        case SampleFilter::Nearest: return VK_FILTER_NEAREST;
+        case SampleFilter::Linear:  return VK_FILTER_LINEAR;
+        default: break;
+    }
+
+    return VK_FILTER_MAX_ENUM;
+}
+
+inline VkSamplerMipmapMode sampleFilterToVkSamplerMipmapMode(SampleFilter filter) {
+    switch (filter) {
+        case SampleFilter::Nearest: return VK_SAMPLER_MIPMAP_MODE_NEAREST;
+        case SampleFilter::Linear:  return VK_SAMPLER_MIPMAP_MODE_LINEAR;
+        default: break;
+    }
+
+    return VK_SAMPLER_MIPMAP_MODE_MAX_ENUM;
+}
+
 inline TextureAspect maximumTextureAspectFromTextureFormat(TextureFormat format) {
     switch (format) {
         case TextureFormat::R8_UInt:        case TextureFormat::R8_SInt:        case TextureFormat::R8_UNorm:       case TextureFormat::R8_SNorm:       case TextureFormat::R8_sRGB:
@@ -1975,6 +2038,7 @@ struct DeviceQueues {
 struct DeviceSymbols {
     PFN_vkCmdBeginRenderingKHR vkCmdBeginRenderingKHR;
     PFN_vkCmdEndRenderingKHR vkCmdEndRenderingKHR;
+    PFN_vkCmdPushDescriptorSetKHR vkCmdPushDescriptorSetKHR;
 };
 
 struct Device_t {
@@ -2004,6 +2068,7 @@ struct Device_t {
 
         symbols.vkCmdBeginRenderingKHR = reinterpret_cast<PFN_vkCmdBeginRenderingKHR>(vkGetDeviceProcAddr(vkDev, "vkCmdBeginRenderingKHR"));
         symbols.vkCmdEndRenderingKHR = reinterpret_cast<PFN_vkCmdEndRenderingKHR>(vkGetDeviceProcAddr(vkDev, "vkCmdEndRenderingKHR"));
+        symbols.vkCmdPushDescriptorSetKHR = reinterpret_cast<PFN_vkCmdPushDescriptorSetKHR>(vkGetDeviceProcAddr(vkDev, "vkCmdPushDescriptorSetKHR"));
 
         enumerateDeviceAdapters(adapterInfo, id);
     }
@@ -2033,6 +2098,8 @@ struct Texture_t {
     uint32_t layerCount;
     uint32_t samples;
     uint32_t mipCount;
+
+    TextureLayout currentLayout = TextureLayout::Undefined;
 
     kobalt::wsi::Swapchain swapchain = nullptr;
 
@@ -2070,6 +2137,19 @@ struct TextureView_t {
         if (swapchain == nullptr) {
             vkDestroyImageView(device->vkDevice, vkImageView, nullptr);
         }
+    }
+};
+
+struct Sampler_t {
+    ObjectBase_t base;
+
+    Device_t* device;
+    VkSampler vkSampler;
+
+    Sampler_t(Device_t* device, VkSampler vkSampler) : base(&device->base.obj, ObjectType::Sampler, vkSampler), device(device), vkSampler(vkSampler) {}
+
+    ~Sampler_t() {
+        vkDestroySampler(device->vkDevice, vkSampler, nullptr);
     }
 };
 
@@ -2211,7 +2291,7 @@ struct PipelineResourceLayout_t {
     std::vector<PipelineResourceBinding> bindings;
     std::vector<PipelinePushConstantRange> pushConstantRanges;
     
-    PipelineResourceLayout_t(Device_t* device, VkDescriptorSetLayout vkDescLayout, PipelineResourceBinding const* bindings, uint32_t bindingCount, PipelinePushConstantRange const* pushConstantRanges, uint32_t pushConstantCount) : base(&device->base.obj, ObjectType::PipelineResourceLayout, vkDescLayout), bindings(bindingCount), pushConstantRanges(pushConstantCount) {
+    PipelineResourceLayout_t(Device_t* device, VkDescriptorSetLayout vkDescLayout, PipelineResourceBinding const* bindings, uint32_t bindingCount, PipelinePushConstantRange const* pushConstantRanges, uint32_t pushConstantCount) : base(&device->base.obj, ObjectType::PipelineResourceLayout, vkDescLayout), device(device), vkDescLayout(vkDescLayout), bindings(bindingCount), pushConstantRanges(pushConstantCount) {
         this->bindings.assign(bindings, bindings + bindingCount);
         this->pushConstantRanges.assign(pushConstantRanges, pushConstantRanges + pushConstantCount);
     }
@@ -2227,9 +2307,10 @@ struct Pipeline_t {
 
     Device_t* device;
     VkPipeline vkPipeline;
+    VkPipelineBindPoint vkBindPoint;
     VkPipelineLayout vkPipelineLayout;
 
-    Pipeline_t(Device_t* device, VkPipeline vkPipeline, VkPipelineLayout vkPipelineLayout) : base(&device->base.obj, ObjectType::Pipeline, vkPipeline), device(device), vkPipeline(vkPipeline), vkPipelineLayout(vkPipelineLayout) {}
+    Pipeline_t(Device_t* device, VkPipeline vkPipeline, VkPipelineBindPoint vkBindPoint, VkPipelineLayout vkPipelineLayout) : base(&device->base.obj, ObjectType::Pipeline, vkPipeline), device(device), vkPipeline(vkPipeline), vkBindPoint(vkBindPoint), vkPipelineLayout(vkPipelineLayout) {}
 
     ~Pipeline_t() {
         vkDeviceWaitIdle(device->vkDevice);
@@ -2431,6 +2512,7 @@ struct CommandList_t {
             barrier.subresourceRange.baseArrayLayer = b.subresource.layerBase;
             barrier.subresourceRange.layerCount = b.subresource.layerCount;
 
+            b.texture->currentLayout = b.newLayout;
             images.push_back(barrier);
         }
 
@@ -2901,6 +2983,7 @@ void destroy(Object_t* object) {
         KOBALT_INTERNAL_DESTROY_OBJ(object, Pipeline);
         KOBALT_INTERNAL_DESTROY_OBJ(object, Buffer);
         KOBALT_INTERNAL_DESTROY_OBJ(object, Texture);
+        KOBALT_INTERNAL_DESTROY_OBJ(object, Sampler);
         KOBALT_INTERNAL_DESTROY_OBJ(object, CommandList);
         KOBALT_INTERNAL_DESTROY_OBJ(object, QueueSync);
         KOBALT_INTERNAL_DESTROY_OBJ(object, HostSync);
@@ -3617,7 +3700,7 @@ bool createDepthStencilState(DepthStencilState& depthStencilState, Device device
     return true;
 }
 
-bool createPipelineResourceLayout(PipelineResourceLayout& layout, Device device, PipelineResourceBinding const* bindings, uint32_t bindingCount, PipelinePushConstantRange const* pushConstantRanges, uint32_t pushConstantCount) {
+bool createPipelineResourceLayout(PipelineResourceLayout& layout, Device device, PipelineResourceBinding const* bindings, uint32_t bindingCount, PipelinePushConstantRange const* pushConstantRanges, uint32_t pushConstantCount, bool dynamic) {
     if (device == nullptr) {
         KOBALT_PRINT(DebugSeverity::Error, nullptr, "device is null");
         return false;
@@ -3668,6 +3751,7 @@ bool createPipelineResourceLayout(PipelineResourceLayout& layout, Device device,
     
     VkDescriptorSetLayoutCreateInfo descLayoutCI = {};
     descLayoutCI.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+    descLayoutCI.flags = dynamic ? VK_DESCRIPTOR_SET_LAYOUT_CREATE_PUSH_DESCRIPTOR_BIT_KHR : 0;
     descLayoutCI.bindingCount = pDescBindings == nullptr ? 0 : bindingCount;
     descLayoutCI.pBindings = pDescBindings;
     
@@ -3897,8 +3981,33 @@ bool createGraphicsPipeline(Pipeline& pipeline, Device device, VertexInputState 
     VkPipelineLayoutCreateInfo pipelineLayoutCI = {};
     pipelineLayoutCI.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
 
+    std::vector<VkDescriptorSetLayout> descLayouts(layoutCount);
+    std::vector<VkPushConstantRange> ranges;
     if (layouts != nullptr) {
-        
+        for (uint32_t i = 0; i < layoutCount; ++i) {
+            if (layouts[i] == nullptr) {
+                KOBALT_PRINTF(DebugSeverity::Error, device, "layouts[%u] is null", i);
+                return false;
+            }
+
+            internal::PipelineResourceLayout_t* l = reinterpret_cast<internal::PipelineResourceLayout_t*>(layouts[i]);
+
+            for (PipelinePushConstantRange const& r : l->pushConstantRanges) {
+                VkPushConstantRange range = {};
+                range.stageFlags = internal::shaderStageToVkShaderStageFlags(r.stages);
+                range.offset = r.offset;
+                range.size = r.size;
+
+                ranges.push_back(range);
+            }
+
+            descLayouts[i] = l->vkDescLayout;
+        }
+
+        pipelineLayoutCI.setLayoutCount = layoutCount;
+        pipelineLayoutCI.pSetLayouts = descLayouts.data();
+        pipelineLayoutCI.pushConstantRangeCount = static_cast<uint32_t>(ranges.size());
+        pipelineLayoutCI.pPushConstantRanges = ranges.data();
     }
 
     VkPipelineLayout vkPipelineLayout;
@@ -3934,7 +4043,7 @@ bool createGraphicsPipeline(Pipeline& pipeline, Device device, VertexInputState 
         return false;
     }
 
-    pipeline = &(new internal::Pipeline_t(dev, vkPipeline, vkPipelineLayout))->base.obj;
+    pipeline = &(new internal::Pipeline_t(dev, vkPipeline, VK_PIPELINE_BIND_POINT_GRAPHICS, vkPipelineLayout))->base.obj;
     return true;
 }
 
@@ -4383,6 +4492,240 @@ bool createTextureView(TextureView& view, Texture texture, TextureFormat format,
     }
 
     view = &(new internal::TextureView_t(dev, tex, vkImageView, format, dimensions))->base.obj;
+    return true;
+}
+
+bool createSampler(Sampler& sampler, Device device, SampleFilter minFilter, SampleFilter magFilter, SampleFilter mipmapFilter, SampleMode sampleModeU, SampleMode sampleModeV, SampleMode sampleModeW, float anisotropy, float minLod, float maxLod) {
+    if (device == nullptr) {
+        KOBALT_PRINT(DebugSeverity::Error, nullptr, "device is null");
+        return false;
+    }
+
+    if (internal::sampleFilterToVkFilter(minFilter) == VK_FILTER_MAX_ENUM) {
+        KOBALT_PRINTF(DebugSeverity::Error, device, "minFilter has invalid value: %u", static_cast<uint32_t>(minFilter));
+        return false;
+    }
+
+    if (internal::sampleFilterToVkFilter(magFilter) == VK_FILTER_MAX_ENUM) {
+        KOBALT_PRINTF(DebugSeverity::Error, device, "magFilter has invalid value: %u", static_cast<uint32_t>(magFilter));
+        return false;
+    }
+
+    if (internal::sampleFilterToVkSamplerMipmapMode(mipmapFilter) == VK_SAMPLER_MIPMAP_MODE_MAX_ENUM) {
+        KOBALT_PRINTF(DebugSeverity::Error, device, "mipmapFilter has invalid value: %u", static_cast<uint32_t>(mipmapFilter));
+        return false;
+    }
+
+    if (internal::sampleModeToVkSamplerAddressMode(sampleModeU) == VK_SAMPLER_ADDRESS_MODE_MAX_ENUM) {
+        KOBALT_PRINTF(DebugSeverity::Error, device, "sampleModeU has invalid value: %u", static_cast<uint32_t>(sampleModeU));
+        return false;
+    }
+
+    if (internal::sampleModeToVkSamplerAddressMode(sampleModeV) == VK_SAMPLER_ADDRESS_MODE_MAX_ENUM) {
+        KOBALT_PRINTF(DebugSeverity::Error, device, "sampleModeV has invalid value: %u", static_cast<uint32_t>(sampleModeV));
+        return false;
+    }
+
+    if (internal::sampleModeToVkSamplerAddressMode(sampleModeW) == VK_SAMPLER_ADDRESS_MODE_MAX_ENUM) {
+        KOBALT_PRINTF(DebugSeverity::Error, device, "sampleModeW has invalid value: %u", static_cast<uint32_t>(sampleModeW));
+        return false;
+    }
+
+    internal::Device_t* dev = reinterpret_cast<internal::Device_t*>(device);
+
+    /* TODO: anisotropy validation */
+
+    VkSamplerCreateInfo createInfo = {};
+    createInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+    createInfo.magFilter = internal::sampleFilterToVkFilter(minFilter);
+    createInfo.minFilter = internal::sampleFilterToVkFilter(magFilter);
+    createInfo.mipmapMode = internal::sampleFilterToVkSamplerMipmapMode(mipmapFilter);
+    createInfo.addressModeU = internal::sampleModeToVkSamplerAddressMode(sampleModeU);
+    createInfo.addressModeV = internal::sampleModeToVkSamplerAddressMode(sampleModeV);
+    createInfo.addressModeW = internal::sampleModeToVkSamplerAddressMode(sampleModeW);
+    createInfo.anisotropyEnable = anisotropy != 1.0f;
+    createInfo.minLod = minLod;
+    createInfo.maxLod = maxLod;
+
+    VkSampler vkSampler;
+    if (vkCreateSampler(dev->vkDevice, &createInfo, nullptr, &vkSampler) != VK_SUCCESS) {
+        KOBALT_PRINT(DebugSeverity::Error, device, "internal Vulkan error; failed to create sampler");
+        return false;
+    }
+
+    sampler = &(new internal::Sampler_t(dev, vkSampler))->base.obj;
+    return true;
+}
+
+bool copyTextureFromBuffer(Buffer srcBuffer, uint64_t srcOffset, uint32_t srcExtraWidth, uint32_t srcExtraHeight, Texture dstTexture, TextureLayout dstLayout, uint32_t dstOffsetX, uint32_t dstOffsetY, uint32_t dstOffsetZ, uint32_t dstWidth, uint32_t dstHeight, uint32_t dstDepth, TextureSubresource const* dstSubresource, HostSync signalHostSync, QueueSync const* signalQueueSyncs, uint32_t signalQueueSyncCount) {
+    if (srcBuffer == nullptr) {
+        KOBALT_PRINT(DebugSeverity::Error, nullptr, "srcBuffer is null");
+        return false;
+    }
+
+    if (dstTexture == nullptr) {
+        KOBALT_PRINT(DebugSeverity::Error, nullptr, "dstTexture is null");
+        return false;
+    }
+
+    if (srcBuffer->device != dstTexture->device) {
+        KOBALT_PRINTF(DebugSeverity::Error, srcBuffer, "srcBuffer and dstTexture do not share same parent device (srcBuffer->device: 0x%016llx, dstTexture->device: 0x%016llx)", reinterpret_cast<unsigned long long>(srcBuffer->device), reinterpret_cast<unsigned long long>(dstTexture->device));
+        return false;
+    }
+
+    internal::Buffer_t* src = reinterpret_cast<internal::Buffer_t*>(srcBuffer);
+    internal::Texture_t* dst = reinterpret_cast<internal::Texture_t*>(dstTexture);
+
+    if (srcExtraWidth < dst->width && srcExtraWidth != 0) {
+        KOBALT_PRINTF(DebugSeverity::Error, dstTexture, "srcExtraWidth (%u) is smaller than dstTexture width; it must be larger or 0", srcExtraWidth);
+        return false;
+    }
+
+    if (srcExtraHeight < dst->height && srcExtraHeight != 0) {
+        KOBALT_PRINTF(DebugSeverity::Error, dstTexture, "srcExtraHeight (%u) is smaller than dstTexture height; it must be larger or 0", srcExtraHeight);
+        return false;
+    }
+
+    if (dstOffsetX + dstWidth > dst->width) {
+        KOBALT_PRINTF(DebugSeverity::Error, dstTexture, "dstOffsetX (%u) and dstWidth (%u) access out of the bounds of dstTexture (width %u)", dstOffsetX, dstWidth, dst->width);
+        return false;
+    }
+
+    if (dstOffsetY + dstHeight > dst->height) {
+        KOBALT_PRINTF(DebugSeverity::Error, dstTexture, "dstOffsetY (%u) and dstHeight (%u) access out of the bounds of dstTexture (height %u)", dstOffsetY, dstHeight, dst->height);
+        return false;
+    }
+
+    if (dstOffsetZ + dstDepth > dst->depth) {
+        KOBALT_PRINTF(DebugSeverity::Error, dstTexture, "dstOffsetZ (%u) and dstDepth (%u) access out of the bounds of dstTexture (depth %u)", dstOffsetZ, dstDepth, dst->depth);
+        return false;
+    }
+
+    if (internal::textureLayoutToVkImageLayout(dstLayout) == VK_IMAGE_LAYOUT_MAX_ENUM) {
+        KOBALT_PRINTF(DebugSeverity::Error, dstTexture, "dstLayout has invalid value: %u", static_cast<uint32_t>(dstLayout));
+        return false;
+    }
+
+    internal::Device_t* dev = src->device;
+
+    if (vkResetCommandBuffer(dev->vkTransferCommandBuffer, 0) != VK_SUCCESS) {
+        KOBALT_PRINT(DebugSeverity::Error, srcBuffer, "internal Vulkan error; failed to reset transfer command buffer");
+        return false;
+    }
+
+    VkCommandBufferBeginInfo beginInfo = {};
+    beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+
+    if (vkBeginCommandBuffer(dev->vkTransferCommandBuffer, &beginInfo) != VK_SUCCESS) {
+        KOBALT_PRINT(DebugSeverity::Error, srcBuffer, "internal Vulkan error; failed to begin transfer command buffer");
+        return false;
+    }
+
+    TextureAspect maxAspect = internal::maximumTextureAspectFromTextureFormat(dst->format);
+    VkImageSubresourceRange subresourceRange = {};
+    subresourceRange.aspectMask = internal::textureAspectToVkImageAspectFlags(maxAspect);
+    subresourceRange.baseMipLevel = 0;
+    subresourceRange.levelCount = 1;
+    subresourceRange.baseArrayLayer = 0;
+    subresourceRange.layerCount = dst->layerCount;
+
+    if (dstSubresource != nullptr) {
+        if ((dstSubresource->aspect & (TextureAspect::Color | TextureAspect::Depth | TextureAspect::Stencil)) != dstSubresource->aspect) {
+            KOBALT_PRINTF(DebugSeverity::Error, dstTexture, "dstSubresource->aspect has invalid value: %u", static_cast<uint32_t>(dstSubresource->aspect));
+            return false;
+        } else if ((dstSubresource->aspect & TextureAspect::Color) == TextureAspect::Color && (maxAspect & TextureAspect::Color) != TextureAspect::Color) {
+            KOBALT_PRINT(DebugSeverity::Error, dstTexture, "dstTexture format has no color aspect, but dstSubresource->aspect references color");
+            return false;
+        } else if ((dstSubresource->aspect & TextureAspect::Depth) == TextureAspect::Depth && (maxAspect & TextureAspect::Depth) != TextureAspect::Depth) {
+            KOBALT_PRINT(DebugSeverity::Error, dstTexture, "dstTexture format has no depth aspect, but dstSubresource->aspect references depth");
+            return false;
+        } else if ((dstSubresource->aspect & TextureAspect::Stencil) == TextureAspect::Stencil && (maxAspect & TextureAspect::Stencil) != TextureAspect::Stencil) {
+            KOBALT_PRINT(DebugSeverity::Error, dstTexture, "dstTexture format has no stencil aspect, but dstSubresource->aspect references stencil");
+            return false;
+        } else if (dstSubresource->layerBase + dstSubresource->layerCount > dst->layerCount) {
+            KOBALT_PRINTF(DebugSeverity::Error, dstTexture, "dstTexture has %u layers, but dstSubresource references base mip %u with count %u", dst->layerCount, dstSubresource->layerBase, dstSubresource->layerCount);
+            return false;
+        } else if (dstSubresource->mipCount > 1) {
+            KOBALT_PRINTF(DebugSeverity::Error, dstTexture, "dstSubresource->mipCount must be either 0 or 1 as copying from buffer to texture can only transfer with one mip level");
+            return false;
+        }
+
+        subresourceRange.aspectMask = internal::textureAspectToVkImageAspectFlags(dstSubresource->aspect);
+        subresourceRange.baseMipLevel = dstSubresource->mipBase;
+        subresourceRange.baseArrayLayer = dstSubresource->layerBase;
+        subresourceRange.layerCount = dstSubresource->layerCount;
+    }
+
+    if (dst->currentLayout != dstLayout) {
+        VkImageMemoryBarrier barrier = {};
+        barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+        barrier.srcAccessMask = 0;
+        barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+        barrier.oldLayout = internal::textureLayoutToVkImageLayout(dst->currentLayout);
+        barrier.newLayout = internal::textureLayoutToVkImageLayout(dstLayout);
+        barrier.srcQueueFamilyIndex = 0;
+        barrier.dstQueueFamilyIndex = 0;
+        barrier.image = dst->vkImage;
+        barrier.subresourceRange = subresourceRange;
+
+        vkCmdPipelineBarrier(dev->vkTransferCommandBuffer, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, nullptr, 0, nullptr, 1, &barrier);
+    }
+
+    VkBufferImageCopy region = {};
+    region.bufferOffset = srcOffset;
+    region.bufferRowLength = srcExtraWidth;
+    region.bufferImageHeight = srcExtraHeight;
+    region.imageSubresource.aspectMask = subresourceRange.aspectMask;
+    region.imageSubresource.mipLevel = subresourceRange.baseMipLevel;
+    region.imageSubresource.baseArrayLayer = subresourceRange.baseArrayLayer;
+    region.imageSubresource.layerCount = subresourceRange.layerCount;
+    region.imageOffset.x = dstOffsetX;
+    region.imageOffset.y = dstOffsetY;
+    region.imageOffset.z = dstOffsetZ;
+    region.imageExtent.width = dstWidth;
+    region.imageExtent.height = dstHeight == 0 ? 1 : dstHeight;
+    region.imageExtent.depth = dstDepth == 0 ? 1 : dstDepth;
+
+    vkCmdCopyBufferToImage(dev->vkTransferCommandBuffer, src->vkBuffer, dst->vkImage, internal::textureLayoutToVkImageLayout(dstLayout), 1, &region);
+
+    if (vkEndCommandBuffer(dev->vkTransferCommandBuffer) != VK_SUCCESS) {
+        KOBALT_PRINT(DebugSeverity::Error, srcBuffer, "internal Vulkan error; failed to end transfer command buffer");
+        return false;
+    }
+
+    std::vector<VkSemaphore> signals(signalQueueSyncCount);
+    VkSemaphore const* pSignals = nullptr;
+    if (signalQueueSyncs != nullptr) {
+        for (uint32_t i = 0; i < signalQueueSyncCount; ++i) {
+            if (signalQueueSyncs[i] == nullptr) {
+                KOBALT_PRINTF(DebugSeverity::Error, srcBuffer, "signalQueueSyncs[%u] is null", i);
+                return false;
+            }
+
+            signals[i] = reinterpret_cast<internal::QueueSync_t*>(signalQueueSyncs[i])->vkSemaphore;
+        }
+
+        pSignals = signals.data();
+    }
+
+    VkSubmitInfo submitInfo = {};
+    submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+    submitInfo.waitSemaphoreCount = 0;
+    submitInfo.pWaitSemaphores = nullptr;
+    submitInfo.pWaitDstStageMask = nullptr;
+    submitInfo.commandBufferCount = 1;
+    submitInfo.pCommandBuffers = &dev->vkTransferCommandBuffer;
+    submitInfo.signalSemaphoreCount = pSignals != nullptr ? signalQueueSyncCount : 0;
+    submitInfo.pSignalSemaphores = pSignals;
+
+    internal::HostSync_t* hs = reinterpret_cast<internal::HostSync_t*>(signalHostSync);
+
+    if (vkQueueSubmit(dev->queues.transfer, 1, &submitInfo, hs != nullptr ? hs->vkFence : nullptr) != VK_SUCCESS) {
+        KOBALT_PRINT(DebugSeverity::Error, srcBuffer, "internal Vulkan error; failed to submit transfer command buffer");
+        return false;
+    }
+
+    dst->currentLayout = dstLayout;
     return true;
 }
 
@@ -5124,7 +5467,7 @@ bool endRenderPass(CommandList commandList) {
     return false;
 }
 
-bool bindGraphicsPipeline(CommandList commandList, Pipeline pipeline) {
+bool bindPipeline(CommandList commandList, Pipeline pipeline) {
     if (commandList == nullptr) {
         KOBALT_PRINT(DebugSeverity::Error, nullptr, "command list is null");
         return false;
@@ -5139,7 +5482,7 @@ bool bindGraphicsPipeline(CommandList commandList, Pipeline pipeline) {
     internal::Device_t* dev = cmdList->device;
     internal::Pipeline_t* ppln = reinterpret_cast<internal::Pipeline_t*>(pipeline);
 
-    vkCmdBindPipeline(cmdList->vkCmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, ppln->vkPipeline);
+    vkCmdBindPipeline(cmdList->vkCmdBuffer, ppln->vkBindPoint, ppln->vkPipeline);
     return true;
 }
 
@@ -5163,6 +5506,109 @@ bool bindVertexBuffer(CommandList commandList, uint32_t index, Buffer buffer, ui
     }
 
     vkCmdBindVertexBuffers(cmdList->vkCmdBuffer, index, 1, &buf->vkBuffer, &offset);
+    return true;
+}
+
+bool pushDynamicPipelineResources(CommandList commandList, Pipeline pipeline, uint32_t set, PipelineResourceTextureSampler const* textureSamplers, uint32_t textureSamplerCount, PipelineResourceBuffer const* buffers, uint32_t bufferCount, PipelineResourceTexelBuffer const* texelBuffers, uint32_t texelBufferCount) {
+    if (commandList == nullptr) {
+        KOBALT_PRINT(DebugSeverity::Error, nullptr, "command list is null");
+        return false;
+    }
+
+    if (pipeline == nullptr) {
+        KOBALT_PRINT(DebugSeverity::Error, commandList, "pipeline is null");
+        return false;
+    }
+
+    if ((textureSamplers == nullptr || textureSamplerCount == 0) && (buffers == nullptr || bufferCount == 0) && (texelBuffers == nullptr || texelBufferCount == 0)) {
+        KOBALT_PRINT(DebugSeverity::Warning, commandList, "unnecessary call to push resources as no resources were provided");
+        return true;
+    }
+
+    internal::CommandList_t* cmdList = reinterpret_cast<internal::CommandList_t*>(commandList);
+    internal::Pipeline_t* ppln = reinterpret_cast<internal::Pipeline_t*>(pipeline);
+    internal::Device_t* dev = ppln->device;
+
+    if (!dev->enabledSupport.dynamicPipelineResources) {
+        KOBALT_PRINT(DebugSeverity::Warning, &dev->base.obj, "dynamic pipeline resources is not enabled on this device");
+    }
+
+    std::vector<VkWriteDescriptorSet> writes;
+    if (textureSamplers != nullptr) {
+        for (uint32_t i = 0; i < textureSamplerCount; ++i) {
+            VkDescriptorImageInfo info = {};
+            switch (textureSamplers[i].type) {
+                case kobalt::PipelineResourceType::Texture:
+                    info.imageLayout = internal::textureLayoutToVkImageLayout(textureSamplers[i].layout);
+                    info.imageView = reinterpret_cast<internal::TextureView_t*>(textureSamplers[i].view)->vkImageView;
+                    break;
+                case kobalt::PipelineResourceType::Sampler:
+                    info.sampler = reinterpret_cast<internal::Sampler_t*>(textureSamplers[i].sampler)->vkSampler;
+                    break;
+                case kobalt::PipelineResourceType::TextureAndSampler:
+                    info.sampler = reinterpret_cast<internal::Sampler_t*>(textureSamplers[i].sampler)->vkSampler;
+                    info.imageLayout = internal::textureLayoutToVkImageLayout(textureSamplers[i].layout);
+                    info.imageView = reinterpret_cast<internal::TextureView_t*>(textureSamplers[i].view)->vkImageView;
+                    break;
+            }
+
+            /* TODO: validation */
+
+            VkWriteDescriptorSet write = {};
+            write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+            write.dstBinding = textureSamplers[i].binding;
+            write.dstArrayElement = textureSamplers[i].elementBase;
+            write.descriptorCount = textureSamplers[i].elementCount;
+            write.descriptorType = internal::pipelineResourceTypeAndPipelineResourceAcccessToVkDescriptorType(textureSamplers[i].type, textureSamplers[i].access);
+            write.pImageInfo = &info;
+
+            writes.push_back(write);
+        }
+    }
+
+    if (buffers != nullptr) {
+        for (uint32_t i = 0; i < bufferCount; ++i) {
+            VkDescriptorBufferInfo info = {};
+            info.buffer = reinterpret_cast<internal::Buffer_t*>(buffers[i].buffer)->vkBuffer;
+            info.offset = buffers[i].offset;
+            info.range = buffers[i].range;
+
+            /* TODO: validation */
+
+            VkWriteDescriptorSet write = {};
+            write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+            write.dstBinding = buffers[i].binding;
+            write.dstArrayElement = buffers[i].elementBase;
+            write.descriptorCount = buffers[i].elementCount;
+            write.descriptorType = internal::pipelineResourceTypeAndPipelineResourceAcccessToVkDescriptorType(buffers[i].type, buffers[i].access);
+            write.pBufferInfo = &info;
+
+            writes.push_back(write);
+        }
+    }
+
+    if (texelBuffers != nullptr) {
+        for (uint32_t i = 0; i < texelBufferCount; ++i) {
+            /* TODO: validation */
+
+            VkWriteDescriptorSet write = {};
+            write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+            write.dstBinding = texelBuffers[i].binding;
+            write.dstArrayElement = texelBuffers[i].elementBase;
+            write.descriptorCount = texelBuffers[i].elementCount;
+            write.descriptorType = internal::pipelineResourceTypeAndPipelineResourceAcccessToVkDescriptorType(texelBuffers[i].type, texelBuffers[i].access);
+            write.pTexelBufferView = /* TODO: */ nullptr;
+
+            writes.push_back(write);
+        }
+    }
+
+    if (dev->symbols.vkCmdPushDescriptorSetKHR == nullptr) {
+        KOBALT_PRINT(DebugSeverity::Error, &dev->base.obj, "dynamic pipeline resources is not supported on this device");
+        return false;
+    }
+
+    dev->symbols.vkCmdPushDescriptorSetKHR(cmdList->vkCmdBuffer, ppln->vkBindPoint, ppln->vkPipelineLayout, set, static_cast<uint32_t>(writes.size()), writes.data());
     return true;
 }
 

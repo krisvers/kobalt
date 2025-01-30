@@ -25,8 +25,14 @@ struct PixelOut {
     float4 color : SV_Target;
 };
 
+[[vk::binding(0)]]
+Texture2D texture;
+
+[[vk::binding(0)]]
+SamplerState textureSampler;
+
 PixelOut psmain(VertexOut vout) {
     PixelOut pout;
-    pout.color = float4(vout.color, 1.0);
+    pout.color = float4(texture.Sample(textureSampler, vout.texcoord).xyz, 1.0);
     return pout;
 }

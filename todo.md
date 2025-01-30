@@ -3,7 +3,6 @@
 - ### Pipeline and Pipeline State:
     - createBlendAttachmentState
     - createBlendState
-    - createPipelineResourceLayout
     - createPipelineResourcePool
     - allocatePipelineResourceSet
     - updatePipelineResourceSet
@@ -15,7 +14,6 @@
 - ### Commands:
     - bindIndexBuffer
     - drawIndexed
-    - pushDynamicPipelineResources
 
 # (*moderate priority*)
 - ### Render Passes:
@@ -31,9 +29,7 @@
     - createComputePipeline
 
 - ### Resources:
-    - copyBuffer
     - copyTexture
-    - copyTextureFromBuffer
     - copyBufferFromTexture
     - createBufferView
 
@@ -41,7 +37,7 @@
     - pushConstants
     - copyBuffer
     - nextSubpass
-    - beginRenderPass 
+    - beginRenderPass
 
 # low priority
 

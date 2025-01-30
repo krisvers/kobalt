@@ -6,6 +6,9 @@
 #define KOBALT_DEFAULT_DEBUG_MESSENGER
 #include "kobalt.h"
 
+#define STB_IMAGE_IMPLEMENTATION
+#include "stb_image.h"
+
 #include <cassert>
 #include <iostream>
 #include <vector>
@@ -55,8 +58,10 @@ int main() {
         std::cout << adapterInfo.name << std::endl;
         std::cout << "    vendor: " << std::hex << static_cast<uint32_t>(adapterInfo.vendor) << std::dec << std::endl;
         std::cout << "    type: " << static_cast<uint32_t>(adapterInfo.type) << std::endl;
-        std::cout << "      dynamic render state: " << adapterInfo.support.dynamicRenderPass << std::endl;
         std::cout << "      swapchain: " << adapterInfo.support.swapchain << std::endl;
+        std::cout << "      flip viewport: " << adapterInfo.support.flipViewport << std::endl;
+        std::cout << "      dynamic render state: " << adapterInfo.support.dynamicRenderPass << std::endl;
+        std::cout << "      dynamic pipeline resources: " << adapterInfo.support.dynamicPipelineResources << std::endl;
         std::cout << "    texture 1D: " << adapterInfo.maxTextureSize1D << std::endl;
         std::cout << "    texture 2D: " << adapterInfo.maxTextureSize2D << std::endl;
         std::cout << "    texture 3D: " << adapterInfo.maxTextureSize3D << std::endl;
@@ -77,7 +82,7 @@ int main() {
     }
 
     kobalt::Device device;
-    assert(kobalt::createDevice(device, 0, { true, true, true, false }));
+    assert(kobalt::createDevice(device, 0, { true, true, true, true }));
     kobalt::setDebugName(device, "Device");
 
     int w, h;
@@ -97,6 +102,33 @@ int main() {
 
     kobalt::TextureView depthTextureView;
     assert(kobalt::createTextureView(depthTextureView, depthTexture, kobalt::TextureFormat::D16_UNorm, kobalt::TextureDimensions::Texture2D, nullptr, nullptr));
+
+    int textureWidth, textureHeight, textureComp;
+    stbi_uc* textureData = stbi_load("test.png", &textureWidth, &textureHeight, &textureComp, 4);
+
+    kobalt::Buffer textureUploadBuffer;
+    assert(kobalt::createBuffer(textureUploadBuffer, device, textureWidth * textureHeight * 4, kobalt::MemoryLocation::HostLocal, kobalt::BufferUsage::TransferSrc));
+
+    void* mappedTextureUpload;
+    assert(kobalt::mapBuffer(mappedTextureUpload, textureUploadBuffer, 0, textureWidth * textureHeight * 4));
+    memcpy(mappedTextureUpload, textureData, textureWidth * textureHeight * 4);
+    kobalt::unmapBuffer(textureUploadBuffer, mappedTextureUpload);
+
+    stbi_image_free(textureData);
+
+    kobalt::Texture texture;
+    assert(kobalt::createTexture(texture, device, kobalt::TextureDimensions::Texture2D, textureWidth, textureHeight, 1, 1, 1, 1, kobalt::TextureFormat::RGBA8_UNorm, kobalt::MemoryLocation::DeviceLocal, kobalt::TextureUsage::SampledTexture | kobalt::TextureUsage::TransferDst));
+
+    kobalt::HostSync transferHostSync;
+    assert(kobalt::createHostSync(transferHostSync, device, false));
+
+    assert(kobalt::copyTextureFromBuffer(textureUploadBuffer, 0, 0, 0, texture, kobalt::TextureLayout::TransferDst, 0, 0, 0, textureWidth, textureHeight, 1, nullptr, transferHostSync, nullptr, 0));
+
+    kobalt::TextureView textureView;
+    assert(kobalt::createTextureView(textureView, texture, kobalt::TextureFormat::RGBA8_UNorm, kobalt::TextureDimensions::Texture2D, nullptr, nullptr));
+
+    kobalt::Sampler sampler;
+    assert(kobalt::createSampler(sampler, device, kobalt::SampleFilter::Nearest, kobalt::SampleFilter::Nearest, kobalt::SampleFilter::Nearest, kobalt::SampleMode::Clamp, kobalt::SampleMode::Clamp, kobalt::SampleMode::Clamp, 1.0f, 0.0f, 0.0f));
 
     kobalt::Shader vertexShader;
     assert(loadShader(vertexShader, device, "shader.vertex.spv"));
@@ -120,12 +152,14 @@ int main() {
     memcpy(vertexUploadMapped, vertexData, sizeof(vertexData));
     kobalt::unmapBuffer(vertexBufferUpload, vertexUploadMapped);
 
-    kobalt::HostSync vertexBufferUploadSync;
-    assert(kobalt::createHostSync(vertexBufferUploadSync, device, false));
-
     kobalt::Buffer vertexBuffer;
     assert(kobalt::createBuffer(vertexBuffer, device, sizeof(vertexData), kobalt::MemoryLocation::DeviceLocal, kobalt::BufferUsage::VertexBuffer | kobalt::BufferUsage::IndexBuffer | kobalt::BufferUsage::TransferDst));
-    assert(kobalt::copyBuffer(vertexBufferUpload, 0, vertexBuffer, 0, sizeof(vertexData), vertexBufferUploadSync, nullptr, 0));
+
+    assert(kobalt::waitForHostSync(transferHostSync, UINT64_MAX));
+    assert(kobalt::resetHostSync(transferHostSync));
+    kobalt::destroy(textureUploadBuffer);
+
+    assert(kobalt::copyBuffer(vertexBufferUpload, 0, vertexBuffer, 0, sizeof(vertexData), transferHostSync, nullptr, 0));
 
     kobalt::VertexAttribute attributes[3] = {
         { 0, 0, kobalt::VertexAttributeType::Float32, 3, 0 },
@@ -156,7 +190,7 @@ int main() {
     pipelineBindings[0].arrayLength = 0;
     
     kobalt::PipelineResourceLayout pipelineLayout;
-    assert(kobalt::createPipelineResourceLayout(pipelineLayout, device, pipelineBindings, 1, nullptr, 0));
+    assert(kobalt::createPipelineResourceLayout(pipelineLayout, device, pipelineBindings, 1, nullptr, 0, true));
 
 /* static render pass
     kobalt::RenderAttachment renderTargetAttachment = {};
@@ -223,9 +257,8 @@ int main() {
     assert(kobalt::createQueueSync(renderFinishedSync, device));
     kobalt::setDebugName(renderFinishedSync, "Render Finished Queue Sync");
 
-    assert(kobalt::waitForHostSync(vertexBufferUploadSync, UINT64_MAX));
+    assert(kobalt::waitForHostSync(transferHostSync, UINT64_MAX));
     kobalt::destroy(vertexBufferUpload);
-    kobalt::destroy(vertexBufferUploadSync);
 
     while (!glfwWindowShouldClose(window)) {
         assert(kobalt::waitForHostSync(readyToRenderSync, UINT64_MAX));
@@ -235,6 +268,9 @@ int main() {
 
         assert(kobalt::resetCommandList(commandList));
         assert(kobalt::beginRecordingCommandList(commandList));
+
+        assert(kobalt::cmd::executionBarrier(commandList, kobalt::PipelineStage::Top, kobalt::PipelineStage::PixelShader));
+        assert(kobalt::cmd::textureBarrier(commandList, kobalt::ResourceAccess::None, kobalt::ResourceAccess::ShaderRead, kobalt::QueueTransfer::Identity, kobalt::QueueTransfer::Identity, kobalt::TextureLayout::Undefined, kobalt::TextureLayout::ShaderRead, texture, nullptr));
 
         assert(kobalt::cmd::executionBarrier(commandList, kobalt::PipelineStage::Top, kobalt::PipelineStage::RenderTarget));
         assert(kobalt::cmd::textureBarrier(commandList, kobalt::ResourceAccess::None, kobalt::ResourceAccess::RenderTargetWrite, kobalt::QueueTransfer::Identity, kobalt::QueueTransfer::Identity, kobalt::TextureLayout::Undefined, kobalt::TextureLayout::RenderTarget, backbuffer, nullptr));
@@ -254,8 +290,19 @@ int main() {
         attachments[1].storeOp = kobalt::RenderAttachmentStoreOp::DontCare;
         attachments[1].clearValue.depthStencil.depth = 0.0f;
 
+        kobalt::PipelineResourceTextureSampler resourceTexture = {};
+        resourceTexture.binding = 0;
+        resourceTexture.elementBase = 0;
+        resourceTexture.elementCount = 1;
+        resourceTexture.type = kobalt::PipelineResourceType::TextureAndSampler;
+        resourceTexture.access = kobalt::PipelineResourceAccess::Sampled;
+        resourceTexture.sampler = sampler;
+        resourceTexture.view = textureView;
+        resourceTexture.layout = kobalt::TextureLayout::ShaderRead;
+
         assert(kobalt::cmd::beginDynamicRenderPass(commandList, { 0, 0, static_cast<uint32_t>(w), static_cast<uint32_t>(h) }, 1, 0, &attachments[0], 1, &attachments[1], nullptr));
-        assert(kobalt::cmd::bindGraphicsPipeline(commandList, graphicsPipeline));
+        assert(kobalt::cmd::bindPipeline(commandList, graphicsPipeline));
+        assert(kobalt::cmd::pushDynamicPipelineResources(commandList, graphicsPipeline, 0, &resourceTexture, 1, nullptr, 0, nullptr, 0));
         assert(kobalt::cmd::bindVertexBuffer(commandList, 0, vertexBuffer, 0));
         assert(kobalt::cmd::setViewport(commandList, 0.0f, 0.0f, static_cast<float>(w), static_cast<float>(h), 0.0f, 1.0f));
         assert(kobalt::cmd::setScissor(commandList, 0, 0, w, h));
@@ -273,6 +320,7 @@ int main() {
         glfwPollEvents();
     }
 
+    kobalt::destroy(transferHostSync);
     kobalt::destroy(renderFinishedSync);
     kobalt::destroy(backbufferAvailableSync);
     kobalt::destroy(readyToRenderSync);
@@ -285,6 +333,9 @@ int main() {
     kobalt::destroy(vertexBuffer);
     kobalt::destroy(vertexShader);
     kobalt::destroy(pixelShader);
+    kobalt::destroy(sampler);
+    kobalt::destroy(textureView);
+    kobalt::destroy(texture);
     kobalt::destroy(depthTextureView);
     kobalt::destroy(depthTexture);
     kobalt::destroy(backbufferView);

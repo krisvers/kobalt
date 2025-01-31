@@ -396,14 +396,14 @@ enum class ComponentSwizzle {
     W = A,
 };
 
-enum class ColorComponent {
+enum class ColorComponentMask {
     R = 0x1,
     G = 0x2,
     B = 0x4,
     A = 0x8,
 };
 
-KOBALT_ENUM_BITMASK(ColorComponent);
+KOBALT_ENUM_BITMASK(ColorComponentMask);
 
 enum class TextureDimensions {
     Texture1D,
@@ -438,6 +438,11 @@ enum class BufferUsage {
 };
 
 KOBALT_ENUM_BITMASK(BufferUsage);
+
+enum class IndexType {
+    Uint16,
+    Uint32,
+};
 
 enum class TextureUsage {
     SampledTexture = 0x1,
@@ -888,7 +893,7 @@ bool createVertexInputState(VertexInputState& vertexInputState, Device device, T
 bool createTessellationState(TessellationState& tessellationState, Device device, uint32_t patchControlPoints);
 bool createRasterizationState(RasterizationState& rasterizationState, Device device, FillMode fillMode, CullMode cullMode, FrontFace frontFace, float depthBias, float depthBiasClamp, float slopeScaledDepthBias);
 bool createDepthStencilState(DepthStencilState& depthStencilState, Device device, bool testDepth, bool writeDepth, CompareOp depthCompareOp, bool testStencil, StencilOpState const* frontStencil, StencilOpState const* backStencil);
-bool createBlendAttachmentState(BlendAttachmentState& blendAttachmentState, Device device, bool blend, BlendFactor srcColorFactor, BlendFactor dstColorFactor, BlendOp colorBlendOp, BlendFactor srcAlphaFactor, BlendFactor dstAlphaFactor, BlendOp alphaBlendOp, ColorComponent colorWriteComponents);
+bool createBlendAttachmentState(BlendAttachmentState& blendAttachmentState, Device device, bool blend, BlendFactor srcColorFactor, BlendFactor dstColorFactor, BlendOp colorBlendOp, BlendFactor srcAlphaFactor, BlendFactor dstAlphaFactor, BlendOp alphaBlendOp, ColorComponentMask colorWriteComponents);
 bool createBlendState(BlendState& blendState, Device device, BlendAttachmentState const* attachments, uint32_t attachmentCount, bool logicOpEnable, LogicOp logicOp, BlendConstants const* constants);
 
 /* pipeline resources */
@@ -965,7 +970,7 @@ bool bufferBarrier(CommandList commandList, ResourceAccess srcAccess, ResourceAc
 /* binding */
 bool bindPipeline(CommandList commandList, Pipeline pipeline);
 bool bindVertexBuffer(CommandList commandList, uint32_t index, Buffer buffer, uint64_t offset);
-bool bindIndexBuffer(CommandList commandList, Buffer buffer, uint64_t offset);
+bool bindIndexBuffer(CommandList commandList, Buffer buffer, uint64_t offset, IndexType indexType);
 
 /* render passes */
 bool beginRenderPass(CommandList commandList, RenderPass renderPass, Framebuffer framebuffer, Rectangle renderArea, ClearColor const* clearColors, uint32_t clearColorCount, ClearDepthStencil const* clearDepthStencil, bool secondaryCommandList);
@@ -984,7 +989,7 @@ bool setScissor(CommandList commandList, uint32_t x, uint32_t y, uint32_t width,
 
 /* drawing */
 bool draw(CommandList commandList, uint32_t vertex, uint32_t count);
-bool drawIndexed(CommandList commandList, uint32_t index, uint32_t count);
+bool drawIndexed(CommandList commandList, uint32_t index, int32_t offset, uint32_t count);
 
 } /* namespace cmd */
 
@@ -2018,6 +2023,58 @@ inline VkStencilOp stencilOpToVkStencilOp(StencilOp op) {
     return VK_STENCIL_OP_MAX_ENUM;
 }
 
+inline VkIndexType indexTypeToVkIndexType(IndexType indexType) {
+    switch (indexType) {
+        case IndexType::Uint16: return VK_INDEX_TYPE_UINT16;
+        case IndexType::Uint32: return VK_INDEX_TYPE_UINT32;
+        default: break;
+    }
+    
+    return VK_INDEX_TYPE_MAX_ENUM;
+}
+
+inline VkBlendOp blendOpToVkBlendOp(BlendOp op) {
+    switch (op) {
+        case BlendOp::Add:          return VK_BLEND_OP_ADD;
+        case BlendOp::Subtract:     return VK_BLEND_OP_SUBTRACT;
+        case BlendOp::RevSubtract:  return VK_BLEND_OP_REVERSE_SUBTRACT;
+        case BlendOp::Min:          return VK_BLEND_OP_MIN;
+        case BlendOp::Max:          return VK_BLEND_OP_MAX;
+        default: break;
+    }
+}
+
+inline VkBlendFactor blendFactorToVkBlendFactor(BlendFactor factor) {
+    switch (factor) {
+        case BlendFactor::Zero:             return VK_BLEND_FACTOR_ZERO;
+        case BlendFactor::One:              return VK_BLEND_FACTOR_ZERO;
+        case BlendFactor::SrcColor:         return VK_BLEND_FACTOR_ZERO;
+        case BlendFactor::InvSrcColor:      return VK_BLEND_FACTOR_ZERO;
+        case BlendFactor::DstColor:         return VK_BLEND_FACTOR_ZERO;
+        case BlendFactor::InvDstColor:      return VK_BLEND_FACTOR_ZERO;
+        case BlendFactor::SrcAlpha:         return VK_BLEND_FACTOR_ZERO;
+        case BlendFactor::InvSrcAlpha:      return VK_BLEND_FACTOR_ZERO;
+        case BlendFactor::DstAlpha:         return VK_BLEND_FACTOR_ZERO;
+        case BlendFactor::InvDstAlpha:      return VK_BLEND_FACTOR_ZERO;
+        case BlendFactor::ConstColor:       return VK_BLEND_FACTOR_ZERO;
+        case BlendFactor::InvConstColor:    return VK_BLEND_FACTOR_ZERO;
+        case BlendFactor::ConstAlpha:       return VK_BLEND_FACTOR_ZERO;
+        case BlendFactor::InvConstAlpha:    return VK_BLEND_FACTOR_ZERO;
+        case BlendFactor::SrcAlphaSat:      return VK_BLEND_FACTOR_ZERO;
+        case BlendFactor::Src1Color:        return VK_BLEND_FACTOR_ZERO;
+        case BlendFactor::InvSrc1Color:     return VK_BLEND_FACTOR_ZERO;
+        case BlendFactor::Src1Alpha:        return VK_BLEND_FACTOR_ZERO;
+        case BlendFactor::InvSrc1Alpha:     return VK_BLEND_FACTOR_ZERO;
+        default: break;
+    }
+    
+    return VK_BLEND_FACTOR_MAX_ENUM;
+}
+
+inline VkColorComponentFlags colorComponentMaskToVkColorComponentFlags(ColorComponentMask mask) {
+    
+}
+
 enum class SurfaceType {
     GLFW
 };
@@ -2331,6 +2388,23 @@ struct DepthStencilState_t {
         createInfo.stencilTestEnable = false;
         createInfo.minDepthBounds = 0.0f;
         createInfo.maxDepthBounds = 1.0f;
+    }
+};
+
+struct BlendAttachmentState_t {
+    ObjectBase_t base;
+    
+    VkPipelineColorBlendAttachmentState state = {};
+    
+    BlendAttachmentState_t(Device device, bool blend, BlendFactor srcColorFactor, BlendFactor dstColorFactor, BlendOp colorBlendOp, BlendFactor srcAlphaFactor, BlendFactor dstAlphaFactor, BlendOp alphaBlendOp, ColorComponentMask colorWriteComponents) : base(device, ObjectType::BlendAttachmentState, nullptr) {
+        state.blendEnable = blend;
+        state.srcColorBlendFactor = internal::blendFactorToVkBlendFactor(srcColorFactor);
+        state.dstColorBlendFactor = internal::blendFactorToVkBlendFactor(dstColorFactor);
+        state.colorBlendOp = internal::blendOpToVkBlendOp(colorBlendOp);
+        state.srcAlphaBlendFactor = internal::blendFactorToVkBlendFactor(srcAlphaFactor);
+        state.dstAlphaBlendFactor = internal::blendFactorToVkBlendFactor(dstAlphaFactor);
+        state.alphaBlendOp = internal::blendOpToVkBlendOp(alphaBlendOp);
+        state.colorWriteMask = internal::colorComponentMaskToVkColorComponentFlags(colorWriteComponents);
     }
 };
 
@@ -5928,6 +6002,34 @@ bool bindVertexBuffer(CommandList commandList, uint32_t index, Buffer buffer, ui
     return true;
 }
 
+bool bindIndexBuffer(CommandList commandList, Buffer buffer, uint64_t offset, IndexType indexType) {
+    if (commandList == nullptr) {
+        KOBALT_PRINT(DebugSeverity::Error, nullptr, "command list is null");
+        return false;
+    }
+
+    if (buffer == nullptr) {
+        KOBALT_PRINT(DebugSeverity::Error, commandList, "buffer is null");
+        return false;
+    }
+    
+    if (internal::indexTypeToVkIndexType(indexType) == VK_INDEX_TYPE_MAX_ENUM) {
+        KOBALT_PRINTF(DebugSeverity::Error, commandList, "indexType has invalid value: %u", static_cast<uint32_t>(indexType));
+        return false;
+    }
+
+    internal::CommandList_t* cmdList = reinterpret_cast<internal::CommandList_t*>(commandList);
+    internal::Buffer_t* buf = reinterpret_cast<internal::Buffer_t*>(buffer);
+
+    if (offset > buf->size) {
+        KOBALT_PRINTF(DebugSeverity::Error, commandList, "offset is out of bounds (offset: %llu, buffer size: %llu)", static_cast<unsigned long long>(offset), static_cast<unsigned long long>(buf->size));
+        return false;
+    }
+
+    vkCmdBindIndexBuffer(cmdList->vkCmdBuffer, buf->vkBuffer, offset, internal::indexTypeToVkIndexType(indexType));
+    return true;
+}
+
 bool pushDynamicPipelineResources(CommandList commandList, Pipeline pipeline, uint32_t set, PipelineResourceTextureSampler const* textureSamplers, uint32_t textureSamplerCount, PipelineResourceBuffer const* buffers, uint32_t bufferCount, PipelineResourceTexelBuffer const* texelBuffers, uint32_t texelBufferCount) {
     if (commandList == nullptr) {
         KOBALT_PRINT(DebugSeverity::Error, nullptr, "command list is null");
@@ -6086,6 +6188,19 @@ bool draw(CommandList commandList, uint32_t vertex, uint32_t count) {
     internal::Device_t* dev = cmdList->device;
 
     vkCmdDraw(cmdList->vkCmdBuffer, count, 1, vertex, 0);
+    return true;
+}
+
+bool drawIndexed(CommandList commandList, uint32_t index, int32_t offset, uint32_t count) {
+    if (commandList == nullptr) {
+        KOBALT_PRINT(DebugSeverity::Error, nullptr, "command list is null");
+        return false;
+    }
+
+    internal::CommandList_t* cmdList = reinterpret_cast<internal::CommandList_t*>(commandList);
+    internal::Device_t* dev = cmdList->device;
+
+    vkCmdDrawIndexed(cmdList->vkCmdBuffer, count, 1, index, offset, 0);
     return true;
 }
 

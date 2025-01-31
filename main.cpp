@@ -302,12 +302,12 @@ int main() {
         assert(kobalt::cmd::pushDynamicPipelineResources(commandList, graphicsPipeline, 0, &resourceTexture, 1, &resourceBuffer, 1, nullptr, 0));
         
         assert(kobalt::cmd::bindVertexBuffer(commandList, 0, vertexBuffer, 0));
-        assert(kobalt::cmd::bindIndexBuffer(commandList, vertexBuffer, sizeof(vertexData)));
+        assert(kobalt::cmd::bindIndexBuffer(commandList, vertexBuffer, sizeof(vertexData), kobalt::IndexType::Uint32));
         
         assert(kobalt::cmd::setViewport(commandList, 0.0f, 0.0f, static_cast<float>(w), static_cast<float>(h), 0.0f, 1.0f));
         assert(kobalt::cmd::setScissor(commandList, 0, 0, w, h));
         
-        assert(kobalt::cmd::drawIndexed(commandList, 0, 6));
+        assert(kobalt::cmd::drawIndexed(commandList, 0, 0, 6));
         
         assert(kobalt::cmd::endRenderPass(commandList));
 

@@ -4714,12 +4714,12 @@ bool uploadTextureData(Texture texture, uint32_t x, uint32_t y, uint32_t z, uint
             KOBALT_PRINTF(DebugSeverity::Error, texture, "texture has %u layers, but subresource references base mip %u with count %u", tex->layerCount, subresource->layerBase, subresource->layerCount);
             return false;
         } else if (subresource->mipCount > 1) {
-            KOBALT_PRINTF(DebugSeverity::Error, texture, "subresource->mipCount must be either 0 or 1 as copying from buffer to texture can only transfer with one mip level");
+            KOBALT_PRINT(DebugSeverity::Error, texture, "subresource->mipCount must be either 0 or 1 as copying from buffer to texture can only transfer with one mip level");
             return false;
         }
 
         if ((subresource->aspect & static_cast<TextureAspect>(static_cast<uint32_t>(subresource->aspect) - 1)) != static_cast<TextureAspect>(0)) {
-            KOBALT_PRINTF(DebugSeverity::Error, texture, "subresource->aspect must only have one aspect flag enabled for texture copies/transfers");
+            KOBALT_PRINT(DebugSeverity::Error, texture, "subresource->aspect must only have one aspect flag enabled for texture copies/transfers");
             return false;
         }
     }
@@ -5021,12 +5021,12 @@ bool copyTextureFromBuffer(Buffer srcBuffer, uint64_t srcOffset, uint32_t srcExt
             KOBALT_PRINTF(DebugSeverity::Error, dstTexture, "dstTexture has %u layers, but dstSubresource references base mip %u with count %u", dst->layerCount, dstSubresource->layerBase, dstSubresource->layerCount);
             return false;
         } else if (dstSubresource->mipCount > 1) {
-            KOBALT_PRINTF(DebugSeverity::Error, dstTexture, "dstSubresource->mipCount must be either 0 or 1 as copying from buffer to texture can only transfer with one mip level");
+            KOBALT_PRINT(DebugSeverity::Error, dstTexture, "dstSubresource->mipCount must be either 0 or 1 as copying from buffer to texture can only transfer with one mip level");
             return false;
         }
 
         if ((dstSubresource->aspect & static_cast<TextureAspect>(static_cast<uint32_t>(dstSubresource->aspect) - 1)) != static_cast<TextureAspect>(0)) {
-            KOBALT_PRINTF(DebugSeverity::Error, dstTexture, "dstSubresource->aspect must only have one aspect flag enabled for texture copies/transfers");
+            KOBALT_PRINT(DebugSeverity::Error, dstTexture, "dstSubresource->aspect must only have one aspect flag enabled for texture copies/transfers");
             return false;
         }
     }

@@ -12,6 +12,7 @@
 #include "linmath.h"
 
 #include <cassert>
+#include <cstring>
 #include <iostream>
 #include <vector>
 #include <fstream>
@@ -218,13 +219,9 @@ int main() {
 
     void* mappedUniformBuffer;
     assert(kobalt::mapBuffer(mappedUniformBuffer, uniformBuffer, 0, sizeof(Uniforms)));
-
-    Uniforms* pUniforms = reinterpret_cast<Uniforms*>(mappedUniformBuffer);
+    
     float aspect = w / static_cast<float>(h);
-
     while (!glfwWindowShouldClose(window)) {
-        mat4x4_identity(pUniforms->mvp);
-
         mat4x4 m;
         mat4x4_identity(m);
         mat4x4_rotate_Z(m, m, glfwGetTime());
@@ -238,7 +235,11 @@ int main() {
         mat4x4_scale_aniso(p, p, 1.0f, aspect, 1.0f);
         p[2][2] = -f / (f - n);
         p[3][2] = -f * n / (f - n);
-        mat4x4_mul(pUniforms->mvp, p, m);
+        
+        Uniforms uniforms = {};
+        mat4x4_mul(uniforms.mvp, p, m);
+        
+        memcpy(mappedUniformBuffer, &uniforms, sizeof(Uniforms));
 
         assert(kobalt::waitForHostSync(readyToRenderSync, UINT64_MAX));
         assert(kobalt::resetHostSync(readyToRenderSync));

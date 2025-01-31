@@ -174,7 +174,13 @@ int main() {
 
     kobalt::DepthStencilState depthStencilState;
     assert(kobalt::createDepthStencilState(depthStencilState, device, true, true, kobalt::CompareOp::Greater, false, nullptr, nullptr));
+
+    kobalt::BlendAttachmentState blendAttachment;
+    assert(kobalt::createBlendAttachmentState(blendAttachment, device, true, kobalt::BlendFactor::SrcAlpha, kobalt::BlendFactor::InvSrcAlpha, kobalt::BlendOp::Add, kobalt::BlendFactor::One, kobalt::BlendFactor::Zero, kobalt::BlendOp::Add, kobalt::ColorComponentMask::None));
     
+    kobalt::BlendState blendState;
+    assert(kobalt::createBlendState(blendState, device, &blendAttachment, 1, false, kobalt::LogicOp::NoOp, nullptr));
+
     kobalt::PipelineResourceBinding pipelineBindings[2];
     pipelineBindings[0].binding = 0;
     pipelineBindings[0].type = kobalt::PipelineResourceType::Buffer;
@@ -205,7 +211,7 @@ int main() {
     pipelinePS.name = "psmain";
 
     kobalt::Pipeline graphicsPipeline;
-    assert(kobalt::createGraphicsPipeline(graphicsPipeline, device, vertexInputState, nullptr, rasterizationState, depthStencilState, nullptr, &pipelineVS, nullptr, nullptr, nullptr, &pipelinePS, &pipelineLayout, 1, nullptr, 0, &graphicsPipelineAttachments[0], 1, &graphicsPipelineAttachments[1], 0, true, 0));
+    assert(kobalt::createGraphicsPipeline(graphicsPipeline, device, vertexInputState, nullptr, rasterizationState, depthStencilState, blendState, &pipelineVS, nullptr, nullptr, nullptr, &pipelinePS, &pipelineLayout, 1, nullptr, 0, &graphicsPipelineAttachments[0], 1, &graphicsPipelineAttachments[1], 0, true, 0));
 
     kobalt::CommandList commandList;
     assert(kobalt::createCommandList(commandList, device, kobalt::QueueType::Graphics, false));

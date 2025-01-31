@@ -397,6 +397,8 @@ enum class ComponentSwizzle {
 };
 
 enum class ColorComponentMask {
+    None = 0x0,
+
     R = 0x1,
     G = 0x2,
     B = 0x4,
@@ -2042,37 +2044,80 @@ inline VkBlendOp blendOpToVkBlendOp(BlendOp op) {
         case BlendOp::Max:          return VK_BLEND_OP_MAX;
         default: break;
     }
+
+    return VK_BLEND_OP_MAX_ENUM;
 }
 
 inline VkBlendFactor blendFactorToVkBlendFactor(BlendFactor factor) {
     switch (factor) {
         case BlendFactor::Zero:             return VK_BLEND_FACTOR_ZERO;
-        case BlendFactor::One:              return VK_BLEND_FACTOR_ZERO;
-        case BlendFactor::SrcColor:         return VK_BLEND_FACTOR_ZERO;
-        case BlendFactor::InvSrcColor:      return VK_BLEND_FACTOR_ZERO;
-        case BlendFactor::DstColor:         return VK_BLEND_FACTOR_ZERO;
-        case BlendFactor::InvDstColor:      return VK_BLEND_FACTOR_ZERO;
-        case BlendFactor::SrcAlpha:         return VK_BLEND_FACTOR_ZERO;
-        case BlendFactor::InvSrcAlpha:      return VK_BLEND_FACTOR_ZERO;
-        case BlendFactor::DstAlpha:         return VK_BLEND_FACTOR_ZERO;
-        case BlendFactor::InvDstAlpha:      return VK_BLEND_FACTOR_ZERO;
-        case BlendFactor::ConstColor:       return VK_BLEND_FACTOR_ZERO;
-        case BlendFactor::InvConstColor:    return VK_BLEND_FACTOR_ZERO;
-        case BlendFactor::ConstAlpha:       return VK_BLEND_FACTOR_ZERO;
-        case BlendFactor::InvConstAlpha:    return VK_BLEND_FACTOR_ZERO;
-        case BlendFactor::SrcAlphaSat:      return VK_BLEND_FACTOR_ZERO;
-        case BlendFactor::Src1Color:        return VK_BLEND_FACTOR_ZERO;
-        case BlendFactor::InvSrc1Color:     return VK_BLEND_FACTOR_ZERO;
-        case BlendFactor::Src1Alpha:        return VK_BLEND_FACTOR_ZERO;
-        case BlendFactor::InvSrc1Alpha:     return VK_BLEND_FACTOR_ZERO;
+        case BlendFactor::One:              return VK_BLEND_FACTOR_ONE;
+        case BlendFactor::SrcColor:         return VK_BLEND_FACTOR_SRC_COLOR;
+        case BlendFactor::InvSrcColor:      return VK_BLEND_FACTOR_ONE_MINUS_SRC_COLOR;
+        case BlendFactor::DstColor:         return VK_BLEND_FACTOR_DST_COLOR;
+        case BlendFactor::InvDstColor:      return VK_BLEND_FACTOR_ONE_MINUS_DST_COLOR;
+        case BlendFactor::SrcAlpha:         return VK_BLEND_FACTOR_SRC_ALPHA;
+        case BlendFactor::InvSrcAlpha:      return VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
+        case BlendFactor::DstAlpha:         return VK_BLEND_FACTOR_DST_ALPHA;
+        case BlendFactor::InvDstAlpha:      return VK_BLEND_FACTOR_ONE_MINUS_DST_ALPHA;
+        case BlendFactor::ConstColor:       return VK_BLEND_FACTOR_CONSTANT_COLOR;
+        case BlendFactor::InvConstColor:    return VK_BLEND_FACTOR_ONE_MINUS_CONSTANT_COLOR;
+        case BlendFactor::ConstAlpha:       return VK_BLEND_FACTOR_CONSTANT_ALPHA;
+        case BlendFactor::InvConstAlpha:    return VK_BLEND_FACTOR_ONE_MINUS_CONSTANT_ALPHA;
+        case BlendFactor::SrcAlphaSat:      return VK_BLEND_FACTOR_SRC_ALPHA_SATURATE;
+        case BlendFactor::Src1Color:        return VK_BLEND_FACTOR_SRC1_COLOR;
+        case BlendFactor::InvSrc1Color:     return VK_BLEND_FACTOR_ONE_MINUS_SRC1_COLOR;
+        case BlendFactor::Src1Alpha:        return VK_BLEND_FACTOR_SRC1_ALPHA;
+        case BlendFactor::InvSrc1Alpha:     return VK_BLEND_FACTOR_ONE_MINUS_SRC1_ALPHA;
         default: break;
     }
     
     return VK_BLEND_FACTOR_MAX_ENUM;
 }
 
+inline VkLogicOp logicOpToVkLogicOp(LogicOp op) {
+    switch (op) {
+        case LogicOp::NoOp:     return VK_LOGIC_OP_NO_OP;
+        case LogicOp::Clear:    return VK_LOGIC_OP_CLEAR;
+        case LogicOp::Set:      return VK_LOGIC_OP_SET;
+        case LogicOp::And:      return VK_LOGIC_OP_AND;
+        case LogicOp::RevAnd:   return VK_LOGIC_OP_AND_REVERSE;
+        case LogicOp::InvAnd:   return VK_LOGIC_OP_AND_INVERTED;
+        case LogicOp::Copy:     return VK_LOGIC_OP_COPY;
+        case LogicOp::InvCopy:  return VK_LOGIC_OP_COPY_INVERTED;
+        case LogicOp::Xor:      return VK_LOGIC_OP_XOR;
+        case LogicOp::Or:       return VK_LOGIC_OP_OR;
+        case LogicOp::RevOr:    return VK_LOGIC_OP_OR_REVERSE;
+        case LogicOp::InvOr:    return VK_LOGIC_OP_OR_INVERTED;
+        case LogicOp::Nor:      return VK_LOGIC_OP_NOR;
+        case LogicOp::XNor:     return VK_LOGIC_OP_EQUIVALENT;
+        case LogicOp::Not:      return VK_LOGIC_OP_INVERT;
+        case LogicOp::Nand:     return VK_LOGIC_OP_NAND;
+        default: break;
+    }
+
+    return VK_LOGIC_OP_MAX_ENUM;
+}
+
 inline VkColorComponentFlags colorComponentMaskToVkColorComponentFlags(ColorComponentMask mask) {
-    
+    VkColorComponentFlags flags = 0;
+    if ((mask & ColorComponentMask::R) == ColorComponentMask::R) {
+        flags |= VK_COLOR_COMPONENT_R_BIT;
+    }
+
+    if ((mask & ColorComponentMask::G) == ColorComponentMask::G) {
+        flags |= VK_COLOR_COMPONENT_G_BIT;
+    }
+
+    if ((mask & ColorComponentMask::B) == ColorComponentMask::B) {
+        flags |= VK_COLOR_COMPONENT_B_BIT;
+    }
+
+    if ((mask & ColorComponentMask::A) == ColorComponentMask::A) {
+        flags |= VK_COLOR_COMPONENT_A_BIT;
+    }
+
+    return flags;
 }
 
 enum class SurfaceType {
@@ -2405,6 +2450,38 @@ struct BlendAttachmentState_t {
         state.dstAlphaBlendFactor = internal::blendFactorToVkBlendFactor(dstAlphaFactor);
         state.alphaBlendOp = internal::blendOpToVkBlendOp(alphaBlendOp);
         state.colorWriteMask = internal::colorComponentMaskToVkColorComponentFlags(colorWriteComponents);
+    }
+};
+
+struct BlendState_t {
+    ObjectBase_t base;
+
+    VkPipelineColorBlendStateCreateInfo createInfo = {};
+
+    std::vector<VkPipelineColorBlendAttachmentState> attachmentStates;
+
+    BlendState_t(Device device, BlendAttachmentState const* attachments, uint32_t attachmentCount, bool logicOpEnable, LogicOp logicOp, BlendConstants const* constants) : base(device, ObjectType::BlendState, nullptr) {
+        attachmentStates.resize(attachmentCount);
+        for (uint32_t i = 0; i < attachmentCount; ++i) {
+            attachmentStates[i] = reinterpret_cast<BlendAttachmentState_t*>(attachments[i])->state;
+        }
+
+        createInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
+        createInfo.logicOpEnable = logicOpEnable;
+        createInfo.logicOp = internal::logicOpToVkLogicOp(logicOp);
+        createInfo.attachmentCount = attachmentCount;
+        createInfo.pAttachments = attachmentStates.data();
+        if (constants != nullptr) {
+            createInfo.blendConstants[0] = constants->rgba[0];
+            createInfo.blendConstants[1] = constants->rgba[1];
+            createInfo.blendConstants[2] = constants->rgba[2];
+            createInfo.blendConstants[3] = constants->rgba[3];
+        } else {
+            createInfo.blendConstants[0] = 1.0f;
+            createInfo.blendConstants[1] = 1.0f;
+            createInfo.blendConstants[2] = 1.0f;
+            createInfo.blendConstants[3] = 1.0f;
+        }
     }
 };
 
@@ -3105,6 +3182,7 @@ void destroy(Object_t* object) {
         KOBALT_INTERNAL_DESTROY_OBJ(object, VertexInputState);
         KOBALT_INTERNAL_DESTROY_OBJ(object, RasterizationState);
         KOBALT_INTERNAL_DESTROY_OBJ(object, DepthStencilState);
+        KOBALT_INTERNAL_DESTROY_OBJ(object, BlendAttachmentState);
         KOBALT_INTERNAL_DESTROY_OBJ(object, PipelineResourceLayout);
         KOBALT_INTERNAL_DESTROY_OBJ(object, Pipeline);
         KOBALT_INTERNAL_DESTROY_OBJ(object, Buffer);
@@ -3834,6 +3912,70 @@ bool createDepthStencilState(DepthStencilState& depthStencilState, Device device
     }
 
     depthStencilState = &dss->base.obj;
+    return true;
+}
+
+bool createBlendAttachmentState(BlendAttachmentState& blendAttachmentState, Device device, bool blend, BlendFactor srcColorFactor, BlendFactor dstColorFactor, BlendOp colorBlendOp, BlendFactor srcAlphaFactor, BlendFactor dstAlphaFactor, BlendOp alphaBlendOp, ColorComponentMask colorWriteComponents) {
+    if (device == nullptr) {
+        KOBALT_PRINT(DebugSeverity::Error, nullptr, "device is null");
+        return false;
+    }
+
+    if (internal::blendFactorToVkBlendFactor(srcColorFactor) == VK_BLEND_FACTOR_MAX_ENUM) {
+        KOBALT_PRINTF(DebugSeverity::Error, device, "srcColorFactor has invalid value: %u", static_cast<uint32_t>(srcColorFactor));
+        return false;
+    }
+
+    if (internal::blendFactorToVkBlendFactor(dstColorFactor) == VK_BLEND_FACTOR_MAX_ENUM) {
+        KOBALT_PRINTF(DebugSeverity::Error, device, "dstColorFactor has invalid value: %u", static_cast<uint32_t>(dstColorFactor));
+        return false;
+    }
+
+    if (internal::blendOpToVkBlendOp(colorBlendOp) == VK_BLEND_OP_MAX_ENUM) {
+        KOBALT_PRINTF(DebugSeverity::Error, device, "colorBlendOp has invalid value: %u", static_cast<uint32_t>(colorBlendOp));
+        return false;
+    }
+
+    if (internal::blendFactorToVkBlendFactor(srcAlphaFactor) == VK_BLEND_FACTOR_MAX_ENUM) {
+        KOBALT_PRINTF(DebugSeverity::Error, device, "srcAlphaFactor has invalid value: %u", static_cast<uint32_t>(srcAlphaFactor));
+        return false;
+    }
+
+    if (internal::blendFactorToVkBlendFactor(dstAlphaFactor) == VK_BLEND_FACTOR_MAX_ENUM) {
+        KOBALT_PRINTF(DebugSeverity::Error, device, "dstAlphaFactor has invalid value: %u", static_cast<uint32_t>(dstAlphaFactor));
+        return false;
+    }
+
+    if (internal::blendOpToVkBlendOp(alphaBlendOp) == VK_BLEND_OP_MAX_ENUM) {
+        KOBALT_PRINTF(DebugSeverity::Error, device, "alphaBlendOp has invalid value: %u", static_cast<uint32_t>(alphaBlendOp));
+        return false;
+    }
+
+    blendAttachmentState = &(new internal::BlendAttachmentState_t(device, blend, srcColorFactor, dstColorFactor, colorBlendOp, srcAlphaFactor, dstAlphaFactor, alphaBlendOp, colorWriteComponents))->base.obj;
+    return true;
+}
+
+bool createBlendState(BlendState& blendState, Device device, BlendAttachmentState const* attachments, uint32_t attachmentCount, bool logicOpEnable, LogicOp logicOp, BlendConstants const* constants) {
+    if (device == nullptr) {
+        KOBALT_PRINT(DebugSeverity::Error, nullptr, "device is null");
+        return false;
+    }
+
+    if (attachments != nullptr) {
+        for (uint32_t i = 0; i < attachmentCount; ++i) {
+            if (attachments[i] == nullptr) {
+                KOBALT_PRINTF(DebugSeverity::Error, device, "attachments[%u] is null", i);
+                return false;
+            }
+        }
+    }
+
+    if (internal::logicOpToVkLogicOp(logicOp) == VK_LOGIC_OP_MAX_ENUM) {
+        KOBALT_PRINTF(DebugSeverity::Error, device, "logicOp has invalid value: %u", static_cast<uint32_t>(logicOp));
+        return false;
+    }
+
+    blendState = &(new internal::BlendState_t(device, attachments, attachmentCount, logicOpEnable, logicOp, constants))->base.obj;
     return true;
 }
 

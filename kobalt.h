@@ -914,10 +914,10 @@ bool copyBuffer(Buffer srcBuffer, uint64_t srcOffset, Buffer dstBuffer, uint64_t
 bool mapBuffer(void*& mappedPointer, Buffer buffer, uint64_t offset, uint64_t size);
 void unmapBuffer(Buffer buffer, void* pointer);
 
+bool createSampler(Sampler& sampler, Device device, SampleFilter minFilter, SampleFilter magFilter, SampleFilter mipmapFilter, SampleMode sampleModeU, SampleMode sampleModeV, SampleMode sampleModeW, float anisotropy, float minLod, float maxLod);
+
 bool createTexture(Texture& texture, Device device, TextureDimensions dimensions, uint32_t width, uint32_t height, uint32_t depth, uint32_t layerCount, uint32_t mipCount, uint32_t samples, TextureFormat format, MemoryLocation location, TextureUsage usage);
 bool createTextureView(TextureView& view, Texture texture, TextureFormat format, TextureDimensions dimensions, ComponentMapping const* mapping, TextureSubresource const* subresource);
-
-bool createSampler(Sampler& sampler, Device device, SampleFilter minFilter, SampleFilter magFilter, SampleFilter mipmapFilter, SampleMode sampleModeU, SampleMode sampleModeV, SampleMode sampleModeW, float anisotropy, float minLod, float maxLod);
 
 /* TODO: */
 bool uploadTextureData();
@@ -1448,6 +1448,92 @@ inline VkFormat textureFormatToVkFormat(TextureFormat format) {
     return VK_FORMAT_MAX_ENUM;
 }
 
+inline TextureAspect maximumTextureAspectFromTextureFormat(TextureFormat format) {
+    switch (format) {
+        case TextureFormat::R8_UInt:        case TextureFormat::R8_SInt:        case TextureFormat::R8_UNorm:       case TextureFormat::R8_SNorm:       case TextureFormat::R8_sRGB:
+        case TextureFormat::RG8_UInt:       case TextureFormat::RG8_SInt:       case TextureFormat::RG8_UNorm:      case TextureFormat::RG8_SNorm:      case TextureFormat::RG8_sRGB:
+        case TextureFormat::RGB8_UInt:      case TextureFormat::RGB8_SInt:      case TextureFormat::RGB8_UNorm:     case TextureFormat::RGB8_SNorm:     case TextureFormat::RGB8_sRGB:
+        case TextureFormat::BGR8_UInt:      case TextureFormat::BGR8_SInt:      case TextureFormat::BGR8_UNorm:     case TextureFormat::BGR8_SNorm:     case TextureFormat::BGR8_sRGB:
+        case TextureFormat::RGBA8_UInt:     case TextureFormat::RGBA8_SInt:     case TextureFormat::RGBA8_UNorm:    case TextureFormat::RGBA8_SNorm:    case TextureFormat::RGBA8_sRGB:
+        case TextureFormat::BGRA8_UInt:     case TextureFormat::BGRA8_SInt:     case TextureFormat::BGRA8_UNorm:    case TextureFormat::BGRA8_SNorm:    case TextureFormat::BGRA8_sRGB:
+        case TextureFormat::R16_UInt:       case TextureFormat::R16_SInt:       case TextureFormat::R16_UNorm:      case TextureFormat::R16_SNorm:      case TextureFormat::R16_Half:
+        case TextureFormat::RG16_UInt:      case TextureFormat::RG16_SInt:      case TextureFormat::RG16_UNorm:     case TextureFormat::RG16_SNorm:     case TextureFormat::RG16_Half:
+        case TextureFormat::RGB16_UInt:     case TextureFormat::RGB16_SInt:     case TextureFormat::RGB16_UNorm:    case TextureFormat::RGB16_SNorm:    case TextureFormat::RGB16_Half:
+        case TextureFormat::RGBA16_UInt:    case TextureFormat::RGBA16_SInt:    case TextureFormat::RGBA16_UNorm:   case TextureFormat::RGBA16_SNorm:   case TextureFormat::RGBA16_Half:
+        case TextureFormat::R32_UInt:       case TextureFormat::R32_SInt:       case TextureFormat::R32_Float:
+        case TextureFormat::RG32_UInt:      case TextureFormat::RG32_SInt:      case TextureFormat::RG32_Float:
+        case TextureFormat::RGB32_UInt:     case TextureFormat::RGB32_SInt:     case TextureFormat::RGB32_Float:
+        case TextureFormat::RGBA32_UInt:    case TextureFormat::RGBA32_SInt:    case TextureFormat::RGBA32_Float:
+        case TextureFormat::R64_UInt:       case TextureFormat::R64_SInt:       case TextureFormat::R64_Float:
+        case TextureFormat::RG64_UInt:      case TextureFormat::RG64_SInt:      case TextureFormat::RG64_Float:
+        case TextureFormat::RGB64_UInt:     case TextureFormat::RGB64_SInt:     case TextureFormat::RGB64_Float:
+        case TextureFormat::RGBA64_UInt:    case TextureFormat::RGBA64_SInt:    case TextureFormat::RGBA64_Float:
+            return TextureAspect::Color;
+        case TextureFormat::D16_UNorm:
+        case TextureFormat::D32_Float:
+            return TextureAspect::Depth;
+        case TextureFormat::S8_UInt:
+            return TextureAspect::Stencil;
+        case TextureFormat::D16_UNorm_S8_UInt:
+        case TextureFormat::D24_UNorm_S8_UInt:
+        case TextureFormat::D32_Float_S8_UInt:
+            return TextureAspect::Depth | TextureAspect::Stencil;
+        default: break;
+    }
+
+    return static_cast<TextureAspect>(0);
+}
+
+inline uint32_t textureFormatAndAspectSize(TextureFormat format, TextureAspect aspect) {
+    TextureAspect maxAspect = maximumTextureAspectFromTextureFormat(format);
+    if ((aspect & maxAspect) != aspect) {
+        return 0;
+    }
+
+    switch (format) {
+        case TextureFormat::R8_UInt:        case TextureFormat::R8_SInt:        case TextureFormat::R8_UNorm:       case TextureFormat::R8_SNorm:       case TextureFormat::R8_sRGB:
+        case TextureFormat::S8_UInt:
+            return 1;
+        case TextureFormat::RG8_UInt:       case TextureFormat::RG8_SInt:       case TextureFormat::RG8_UNorm:      case TextureFormat::RG8_SNorm:      case TextureFormat::RG8_sRGB:
+        case TextureFormat::R16_UInt:       case TextureFormat::R16_SInt:       case TextureFormat::R16_UNorm:      case TextureFormat::R16_SNorm:      case TextureFormat::R16_Half:
+        case TextureFormat::D16_UNorm:
+            return 2;
+        case TextureFormat::RGB8_UInt:      case TextureFormat::RGB8_SInt:      case TextureFormat::RGB8_UNorm:     case TextureFormat::RGB8_SNorm:     case TextureFormat::RGB8_sRGB:
+        case TextureFormat::BGR8_UInt:      case TextureFormat::BGR8_SInt:      case TextureFormat::BGR8_UNorm:     case TextureFormat::BGR8_SNorm:     case TextureFormat::BGR8_sRGB:
+            return 3;
+        case TextureFormat::D16_UNorm_S8_UInt:
+            return aspect == TextureAspect::Depth ? 2 : 1;
+        case TextureFormat::RGBA8_UInt:     case TextureFormat::RGBA8_SInt:     case TextureFormat::RGBA8_UNorm:    case TextureFormat::RGBA8_SNorm:    case TextureFormat::RGBA8_sRGB:
+        case TextureFormat::BGRA8_UInt:     case TextureFormat::BGRA8_SInt:     case TextureFormat::BGRA8_UNorm:    case TextureFormat::BGRA8_SNorm:    case TextureFormat::BGRA8_sRGB:
+        case TextureFormat::RG16_UInt:      case TextureFormat::RG16_SInt:      case TextureFormat::RG16_UNorm:     case TextureFormat::RG16_SNorm:     case TextureFormat::RG16_Half:
+        case TextureFormat::R32_UInt:       case TextureFormat::R32_SInt:       case TextureFormat::R32_Float:
+        case TextureFormat::D32_Float:
+            return 4;
+        case TextureFormat::D24_UNorm_S8_UInt:
+            return aspect == TextureAspect::Depth ? 3 : 1;
+        case TextureFormat::D32_Float_S8_UInt:
+            return aspect == TextureAspect::Depth ? 4 : 1;
+        case TextureFormat::RGB16_UInt:     case TextureFormat::RGB16_SInt:     case TextureFormat::RGB16_UNorm:    case TextureFormat::RGB16_SNorm:    case TextureFormat::RGB16_Half:
+            return 6;
+        case TextureFormat::RGBA16_UInt:    case TextureFormat::RGBA16_SInt:    case TextureFormat::RGBA16_UNorm:   case TextureFormat::RGBA16_SNorm:   case TextureFormat::RGBA16_Half:
+        case TextureFormat::RG32_UInt:      case TextureFormat::RG32_SInt:      case TextureFormat::RG32_Float:
+        case TextureFormat::R64_UInt:       case TextureFormat::R64_SInt:       case TextureFormat::R64_Float:
+            return 8;
+        case TextureFormat::RGB32_UInt:     case TextureFormat::RGB32_SInt:     case TextureFormat::RGB32_Float:
+            return 12;
+        case TextureFormat::RGBA32_UInt:    case TextureFormat::RGBA32_SInt:    case TextureFormat::RGBA32_Float:
+        case TextureFormat::RG64_UInt:      case TextureFormat::RG64_SInt:      case TextureFormat::RG64_Float:
+            return 16;
+        case TextureFormat::RGB64_UInt:     case TextureFormat::RGB64_SInt:     case TextureFormat::RGB64_Float:
+            return 24;
+        case TextureFormat::RGBA64_UInt:    case TextureFormat::RGBA64_SInt:    case TextureFormat::RGBA64_Float:
+            return 32;
+        default: break;
+    }
+
+    return 0;
+}
+
 inline TextureFormat textureFormatFromVkFormat(VkFormat format) {
     switch (format) {
         case VK_FORMAT_UNDEFINED:           return TextureFormat::Undefined;
@@ -1901,42 +1987,6 @@ inline VkSamplerMipmapMode sampleFilterToVkSamplerMipmapMode(SampleFilter filter
     return VK_SAMPLER_MIPMAP_MODE_MAX_ENUM;
 }
 
-inline TextureAspect maximumTextureAspectFromTextureFormat(TextureFormat format) {
-    switch (format) {
-        case TextureFormat::R8_UInt:        case TextureFormat::R8_SInt:        case TextureFormat::R8_UNorm:       case TextureFormat::R8_SNorm:       case TextureFormat::R8_sRGB:
-        case TextureFormat::RG8_UInt:       case TextureFormat::RG8_SInt:       case TextureFormat::RG8_UNorm:      case TextureFormat::RG8_SNorm:      case TextureFormat::RG8_sRGB:
-        case TextureFormat::RGB8_UInt:      case TextureFormat::RGB8_SInt:      case TextureFormat::RGB8_UNorm:     case TextureFormat::RGB8_SNorm:     case TextureFormat::RGB8_sRGB:
-        case TextureFormat::BGR8_UInt:      case TextureFormat::BGR8_SInt:      case TextureFormat::BGR8_UNorm:     case TextureFormat::BGR8_SNorm:     case TextureFormat::BGR8_sRGB:
-        case TextureFormat::RGBA8_UInt:     case TextureFormat::RGBA8_SInt:     case TextureFormat::RGBA8_UNorm:    case TextureFormat::RGBA8_SNorm:    case TextureFormat::RGBA8_sRGB:
-        case TextureFormat::BGRA8_UInt:     case TextureFormat::BGRA8_SInt:     case TextureFormat::BGRA8_UNorm:    case TextureFormat::BGRA8_SNorm:    case TextureFormat::BGRA8_sRGB:
-        case TextureFormat::R16_UInt:       case TextureFormat::R16_SInt:       case TextureFormat::R16_UNorm:      case TextureFormat::R16_SNorm:      case TextureFormat::R16_Half:
-        case TextureFormat::RG16_UInt:      case TextureFormat::RG16_SInt:      case TextureFormat::RG16_UNorm:     case TextureFormat::RG16_SNorm:     case TextureFormat::RG16_Half:
-        case TextureFormat::RGB16_UInt:     case TextureFormat::RGB16_SInt:     case TextureFormat::RGB16_UNorm:    case TextureFormat::RGB16_SNorm:    case TextureFormat::RGB16_Half:
-        case TextureFormat::RGBA16_UInt:    case TextureFormat::RGBA16_SInt:    case TextureFormat::RGBA16_UNorm:   case TextureFormat::RGBA16_SNorm:   case TextureFormat::RGBA16_Half:
-        case TextureFormat::R32_UInt:       case TextureFormat::R32_SInt:       case TextureFormat::R32_Float:
-        case TextureFormat::RG32_UInt:      case TextureFormat::RG32_SInt:      case TextureFormat::RG32_Float:
-        case TextureFormat::RGB32_UInt:     case TextureFormat::RGB32_SInt:     case TextureFormat::RGB32_Float:
-        case TextureFormat::RGBA32_UInt:    case TextureFormat::RGBA32_SInt:    case TextureFormat::RGBA32_Float:
-        case TextureFormat::R64_UInt:       case TextureFormat::R64_SInt:       case TextureFormat::R64_Float:
-        case TextureFormat::RG64_UInt:      case TextureFormat::RG64_SInt:      case TextureFormat::RG64_Float:
-        case TextureFormat::RGB64_UInt:     case TextureFormat::RGB64_SInt:     case TextureFormat::RGB64_Float:
-        case TextureFormat::RGBA64_UInt:    case TextureFormat::RGBA64_SInt:    case TextureFormat::RGBA64_Float:
-            return TextureAspect::Color;
-        case TextureFormat::D16_UNorm:
-        case TextureFormat::D32_Float:
-            return TextureAspect::Depth;
-        case TextureFormat::S8_UInt:
-            return TextureAspect::Stencil;
-        case TextureFormat::D16_UNorm_S8_UInt:
-        case TextureFormat::D24_UNorm_S8_UInt:
-        case TextureFormat::D32_Float_S8_UInt:
-            return TextureAspect::Depth | TextureAspect::Stencil;
-        default: break;
-    }
-
-    return static_cast<TextureAspect>(0);
-}
-
 inline VkCompareOp compareOpToVkCompareOp(CompareOp op) {
     switch (op) {
         case CompareOp::Never:      return VK_COMPARE_OP_NEVER;
@@ -2059,8 +2109,9 @@ struct Device_t {
 
     VkCommandPool vkTransferCommandPool;
     VkCommandBuffer vkTransferCommandBuffer;
+    VkFence vkTransferFence;
 
-    Device_t(uint32_t id, VkDevice vkDev, VkPhysicalDevice vkPhys, DeviceSupport const& support, ExtraDeviceFeatures const& extra, DeviceQueues const& qs, VkCommandPool vkTransferCommandPool, VkCommandBuffer vkTransferCommandBuffer) : base(nullptr, ObjectType::Device, vkDev), id(id), vkDevice(vkDev), vkPhysicalDevice(vkPhys), enabledSupport(support), extraFeatures(extra), queues(qs), vkTransferCommandPool(vkTransferCommandPool), vkTransferCommandBuffer(vkTransferCommandBuffer) {
+    Device_t(uint32_t id, VkDevice vkDev, VkPhysicalDevice vkPhys, DeviceSupport const& support, ExtraDeviceFeatures const& extra, DeviceQueues const& qs, VkCommandPool vkTransferCommandPool, VkCommandBuffer vkTransferCommandBuffer, VkFence vkTransferFence) : base(nullptr, ObjectType::Device, vkDev), id(id), vkDevice(vkDev), vkPhysicalDevice(vkPhys), enabledSupport(support), extraFeatures(extra), queues(qs), vkTransferCommandPool(vkTransferCommandPool), vkTransferCommandBuffer(vkTransferCommandBuffer), vkTransferFence(vkTransferFence) {
         vkGetDeviceQueue(vkDev, queues.graphicsFamily, 0, &queues.graphics);
         vkGetDeviceQueue(vkDev, queues.computeFamily, 0, &queues.compute);
         vkGetDeviceQueue(vkDev, queues.transferFamily, 0, &queues.transfer);
@@ -2075,6 +2126,7 @@ struct Device_t {
 
     ~Device_t() {
         vkDeviceWaitIdle(vkDevice);
+        vkDestroyFence(vkDevice, vkTransferFence, nullptr);
         vkDestroyCommandPool(vkDevice, vkTransferCommandPool, nullptr);
         vkDestroyDevice(vkDevice, nullptr);
     }
@@ -3327,7 +3379,18 @@ bool createDevice(Device& device, uint32_t id, DeviceSupport support) {
         return false;
     }
 
-    internal::Device_t* dev = new internal::Device_t(id, vkDevice, vkPhysical, support, extraSupport, internal::DeviceQueues(bestGraphics, graphicsTypes, bestCompute, computeTypes, bestTransfer, transferTypes, bestGeneral, generalTypes), vkTransferCommandPool, vkTransferCommandBuffer);
+    VkFenceCreateInfo fenceCI = {};
+    fenceCI.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+
+    VkFence vkTransferFence;
+    if (vkCreateFence(vkDevice, &fenceCI, nullptr, &vkTransferFence) != VK_SUCCESS) {
+        KOBALT_PRINT(DebugSeverity::Error, nullptr, "internal Vulkan error; failed to create transfer fence");
+        vkDestroyCommandPool(vkDevice, vkTransferCommandPool, nullptr);
+        vkDestroyDevice(vkDevice, nullptr);
+        return false;
+    }
+
+    internal::Device_t* dev = new internal::Device_t(id, vkDevice, vkPhysical, support, extraSupport, internal::DeviceQueues(bestGraphics, graphicsTypes, bestCompute, computeTypes, bestTransfer, transferTypes, bestGeneral, generalTypes), vkTransferCommandPool, vkTransferCommandBuffer, vkTransferFence);
     device = &dev->base.obj;
     return true;
 }
@@ -4089,6 +4152,115 @@ bool createBuffer(Buffer& buffer, Device device, uint64_t size, MemoryLocation l
     return true;
 }
 
+bool uploadBufferData(Buffer buffer, uint64_t offset, void const* data, uint64_t size) {
+    if (buffer == nullptr) {
+        KOBALT_PRINT(DebugSeverity::Error, nullptr, "buffer is null");
+        return false;
+    }
+
+    if (data == nullptr) {
+        KOBALT_PRINT(DebugSeverity::Error, buffer, "data is nullptr");
+        return false;
+    }
+
+    internal::Buffer_t* buf = reinterpret_cast<internal::Buffer_t*>(buffer);
+    internal::Device_t* dev = buf->device;
+
+    if (offset + size > buf->size) {
+        KOBALT_PRINTF(DebugSeverity::Error, buffer, "offset and size are invalid for buffer due to being out of bounds (buffer size: %llu, requested copy start: %llu, requested copy end %llu", static_cast<unsigned long long>(buf->size), static_cast<unsigned long long>(offset), static_cast<unsigned long long>(offset + size));
+        return false;
+    }
+
+    VkBuffer vkUploadBuffer;
+    if (!prism::vk::createBufferSimple(dev->vkDevice, size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, nullptr, vkUploadBuffer)) {
+        KOBALT_PRINT(DebugSeverity::Error, buffer, "internal Vulkan error; failed to create upload buffer");
+        return false;
+    }
+
+    VkDeviceMemory vkUploadMemory;
+    if (!prism::vk::allocateBufferSimple(dev->vkDevice, buf->device->vkPhysicalDevice, vkUploadBuffer, VK_MEMORY_PROPERTY_HOST_COHERENT_BIT | VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, nullptr, vkUploadMemory)) {
+        KOBALT_PRINT(DebugSeverity::Error, buffer, "internal Vulkan error; failed to allocate upload buffer memory");
+        vkDestroyBuffer(dev->vkDevice, vkUploadBuffer, nullptr);
+        return false;
+    }
+
+    if (vkBindBufferMemory(dev->vkDevice, vkUploadBuffer, vkUploadMemory, 0) != VK_SUCCESS) {
+        KOBALT_PRINT(DebugSeverity::Error, buffer, "internal Vulkan error; failed to bind upload buffer memory");
+        vkDestroyBuffer(dev->vkDevice, vkUploadBuffer, nullptr);
+        vkFreeMemory(dev->vkDevice, vkUploadMemory, nullptr);
+        return false;
+    }
+
+    void* mapped;
+    if (vkMapMemory(dev->vkDevice, vkUploadMemory, 0, size, 0, &mapped) != VK_SUCCESS) {
+        KOBALT_PRINT(DebugSeverity::Error, buffer, "internal Vulkan error; failed to map upload buffer memory");
+        vkDestroyBuffer(dev->vkDevice, vkUploadBuffer, nullptr);
+        vkFreeMemory(dev->vkDevice, vkUploadMemory, nullptr);
+        return false;
+    }
+
+    memcpy(mapped, data, size);
+    vkUnmapMemory(dev->vkDevice, vkUploadMemory);
+
+    if (vkResetCommandBuffer(dev->vkTransferCommandBuffer, 0) != VK_SUCCESS) {
+        KOBALT_PRINT(DebugSeverity::Error, &dev->base.obj, "internal Vulkan error; failed to reset transfer command buffer");
+        vkDestroyBuffer(dev->vkDevice, vkUploadBuffer, nullptr);
+        vkFreeMemory(dev->vkDevice, vkUploadMemory, nullptr);
+        return false;
+    }
+
+    VkCommandBufferBeginInfo beginInfo = {};
+    beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+
+    if (vkBeginCommandBuffer(dev->vkTransferCommandBuffer, &beginInfo) != VK_SUCCESS) {
+        KOBALT_PRINT(DebugSeverity::Error, &dev->base.obj, "internal Vulkan error; failed to begin transfer command buffer");
+        vkDestroyBuffer(dev->vkDevice, vkUploadBuffer, nullptr);
+        vkFreeMemory(dev->vkDevice, vkUploadMemory, nullptr);
+        return false;
+    }
+
+    VkBufferCopy region = {};
+    region.dstOffset = offset;
+    region.size = size;
+    region.srcOffset = 0;
+
+    vkCmdCopyBuffer(dev->vkTransferCommandBuffer, vkUploadBuffer, buf->vkBuffer, 1, &region);
+
+    if (vkEndCommandBuffer(dev->vkTransferCommandBuffer) != VK_SUCCESS) {
+        KOBALT_PRINT(DebugSeverity::Error, &dev->base.obj, "internal Vulkan error; failed to end transfer command buffer");
+        vkDestroyBuffer(dev->vkDevice, vkUploadBuffer, nullptr);
+        vkFreeMemory(dev->vkDevice, vkUploadMemory, nullptr);
+        return false;
+    }
+
+    VkSubmitInfo submitInfo = {};
+    submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+    submitInfo.waitSemaphoreCount = 0;
+    submitInfo.pWaitSemaphores = nullptr;
+    submitInfo.pWaitDstStageMask = nullptr;
+    submitInfo.commandBufferCount = 1;
+    submitInfo.pCommandBuffers = &dev->vkTransferCommandBuffer;
+    submitInfo.signalSemaphoreCount = 0;
+    submitInfo.pSignalSemaphores = nullptr;
+
+    if (vkQueueSubmit(dev->queues.transfer, 1, &submitInfo, dev->vkTransferFence) != VK_SUCCESS) {
+        KOBALT_PRINT(DebugSeverity::Error, &dev->base.obj, "internal Vulkan error; failed to submit transfer command buffer");
+        vkDestroyBuffer(dev->vkDevice, vkUploadBuffer, nullptr);
+        vkFreeMemory(dev->vkDevice, vkUploadMemory, nullptr);
+        return false;
+    }
+
+    if (vkWaitForFences(dev->vkDevice, 1, &dev->vkTransferFence, true, UINT64_MAX) != VK_SUCCESS) {
+        KOBALT_PRINT(DebugSeverity::Warning, &dev->base.obj, "internal Vulkan warning; transfer fence did not successfully wait for transfer operation");
+    }
+
+    vkDestroyBuffer(dev->vkDevice, vkUploadBuffer, nullptr);
+    vkFreeMemory(dev->vkDevice, vkUploadMemory, nullptr);
+
+    vkResetFences(dev->vkDevice, 1, &dev->vkTransferFence);
+    return true;
+}
+
 bool copyBuffer(Buffer srcBuffer, uint64_t srcOffset, Buffer dstBuffer, uint64_t dstOffset, uint64_t size, HostSync signalHostSync, QueueSync const* signalQueueSyncs, uint32_t signalQueueSyncCount) {
     if (srcBuffer == nullptr) {
         KOBALT_PRINT(DebugSeverity::Error, nullptr, "srcBuffer is null");
@@ -4495,6 +4667,231 @@ bool createTextureView(TextureView& view, Texture texture, TextureFormat format,
     return true;
 }
 
+bool uploadTextureData(Texture texture, uint32_t x, uint32_t y, uint32_t z, uint32_t width, uint32_t height, uint32_t depth, TextureSubresource const* subresource, void const* data) {
+    if (texture == nullptr) {
+        KOBALT_PRINT(DebugSeverity::Error, nullptr, "texture is null");
+        return false;
+    }
+
+    if (data == nullptr) {
+        KOBALT_PRINT(DebugSeverity::Error, texture, "data is nullptr");
+        return false;
+    }
+
+    internal::Texture_t* tex = reinterpret_cast<internal::Texture_t*>(texture);
+    internal::Device_t* dev = tex->device;
+
+    if (x + width > tex->width) {
+        KOBALT_PRINTF(DebugSeverity::Error, texture, "x (%u) and width (%u) access out of the bounds of texture (width %u)", x, width, tex->width);
+        return false;
+    }
+
+    if (y + height > tex->height) {
+        KOBALT_PRINTF(DebugSeverity::Error, texture, "y (%u) and height (%u) access out of the bounds of texture (height %u)", y, height, tex->height);
+        return false;
+    }
+
+    if (z + depth > tex->depth) {
+        KOBALT_PRINTF(DebugSeverity::Error, texture, "z (%u) and depth (%u) access out of the bounds of texture (depth %u)", z, depth, tex->depth);
+        return false;
+    }
+
+    TextureAspect maxAspect = internal::maximumTextureAspectFromTextureFormat(tex->format);
+    if (subresource != nullptr) {
+        if ((subresource->aspect & (TextureAspect::Color | TextureAspect::Depth | TextureAspect::Stencil)) != subresource->aspect) {
+            KOBALT_PRINTF(DebugSeverity::Error, texture, "subresource->aspect has invalid value: %u", static_cast<uint32_t>(subresource->aspect));
+            return false;
+        } else if ((subresource->aspect & TextureAspect::Color) == TextureAspect::Color && (maxAspect & TextureAspect::Color) != TextureAspect::Color) {
+            KOBALT_PRINT(DebugSeverity::Error, texture, "texture format has no color aspect, but subresource->aspect references color");
+            return false;
+        } else if ((subresource->aspect & TextureAspect::Depth) == TextureAspect::Depth && (maxAspect & TextureAspect::Depth) != TextureAspect::Depth) {
+            KOBALT_PRINT(DebugSeverity::Error, texture, "texture format has no depth aspect, but subresource->aspect references depth");
+            return false;
+        } else if ((subresource->aspect & TextureAspect::Stencil) == TextureAspect::Stencil && (maxAspect & TextureAspect::Stencil) != TextureAspect::Stencil) {
+            KOBALT_PRINT(DebugSeverity::Error, texture, "texture format has no stencil aspect, but subresource->aspect references stencil");
+            return false;
+        } else if (subresource->layerBase + subresource->layerCount > tex->layerCount) {
+            KOBALT_PRINTF(DebugSeverity::Error, texture, "texture has %u layers, but subresource references base mip %u with count %u", tex->layerCount, subresource->layerBase, subresource->layerCount);
+            return false;
+        } else if (subresource->mipCount > 1) {
+            KOBALT_PRINTF(DebugSeverity::Error, texture, "subresource->mipCount must be either 0 or 1 as copying from buffer to texture can only transfer with one mip level");
+            return false;
+        }
+
+        if ((subresource->aspect & static_cast<TextureAspect>(static_cast<uint32_t>(subresource->aspect) - 1)) != static_cast<TextureAspect>(0)) {
+            KOBALT_PRINTF(DebugSeverity::Error, texture, "subresource->aspect must only have one aspect flag enabled for texture copies/transfers");
+            return false;
+        }
+    }
+
+    TextureAspect aspect = maxAspect;
+    if (subresource != nullptr) {
+        aspect = subresource->aspect;
+    } else {
+        if ((maxAspect & static_cast<TextureAspect>(static_cast<uint32_t>(maxAspect) - 1)) != static_cast<TextureAspect>(0)) {
+            if ((maxAspect & TextureAspect::Color) == TextureAspect::Color) {
+                aspect = TextureAspect::Color;
+            } else if ((maxAspect & TextureAspect::Depth) == TextureAspect::Depth) {
+                aspect = TextureAspect::Depth;
+            } else {
+                aspect = TextureAspect::Stencil;
+            }
+        }
+    }
+
+    if (height == 0) {
+        height = 1;
+    }
+
+    if (depth == 0) {
+        depth = 1;
+    }
+
+    VkBuffer vkUploadBuffer;
+    if (!prism::vk::createBufferSimple(dev->vkDevice, internal::textureFormatAndAspectSize(tex->format, aspect) * width * height * depth, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, nullptr, vkUploadBuffer)) {
+        KOBALT_PRINT(DebugSeverity::Error, texture, "internal Vulkan error; failed to create upload buffer");
+        return false;
+    }
+
+    VkDeviceMemory vkUploadMemory;
+    if (!prism::vk::allocateBufferSimple(dev->vkDevice, dev->vkPhysicalDevice, vkUploadBuffer, VK_MEMORY_PROPERTY_HOST_COHERENT_BIT | VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, nullptr, vkUploadMemory)) {
+        KOBALT_PRINT(DebugSeverity::Error, texture, "internal Vulkan error; failed to allocate upload buffer memory");
+        vkDestroyBuffer(dev->vkDevice, vkUploadBuffer, nullptr);
+        return false;
+    }
+
+    if (vkBindBufferMemory(dev->vkDevice, vkUploadBuffer, vkUploadMemory, 0) != VK_SUCCESS) {
+        KOBALT_PRINT(DebugSeverity::Error, texture, "internal Vulkan error; failed to bind upload buffer memory");
+        vkDestroyBuffer(dev->vkDevice, vkUploadBuffer, nullptr);
+        vkFreeMemory(dev->vkDevice, vkUploadMemory, nullptr);
+        return false;
+    }
+
+    void* mapped;
+    if (vkMapMemory(dev->vkDevice, vkUploadMemory, 0, internal::textureFormatAndAspectSize(tex->format, aspect) * width * height * depth, 0, &mapped) != VK_SUCCESS) {
+        KOBALT_PRINT(DebugSeverity::Error, texture, "internal Vulkan error; failed to map upload buffer memory");
+        vkDestroyBuffer(dev->vkDevice, vkUploadBuffer, nullptr);
+        vkFreeMemory(dev->vkDevice, vkUploadMemory, nullptr);
+        return false;
+    }
+
+    memcpy(mapped, data, internal::textureFormatAndAspectSize(tex->format, aspect) * width * height * depth);
+    vkUnmapMemory(dev->vkDevice, vkUploadMemory);
+
+    if (vkResetCommandBuffer(dev->vkTransferCommandBuffer, 0) != VK_SUCCESS) {
+        KOBALT_PRINT(DebugSeverity::Error, &dev->base.obj, "internal Vulkan error; failed to reset transfer command buffer");
+        vkDestroyBuffer(dev->vkDevice, vkUploadBuffer, nullptr);
+        vkFreeMemory(dev->vkDevice, vkUploadMemory, nullptr);
+        return false;
+    }
+
+    VkCommandBufferBeginInfo beginInfo = {};
+    beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+
+    if (vkBeginCommandBuffer(dev->vkTransferCommandBuffer, &beginInfo) != VK_SUCCESS) {
+        KOBALT_PRINT(DebugSeverity::Error, &dev->base.obj, "internal Vulkan error; failed to begin transfer command buffer");
+        vkDestroyBuffer(dev->vkDevice, vkUploadBuffer, nullptr);
+        vkFreeMemory(dev->vkDevice, vkUploadMemory, nullptr);
+        return false;
+    }
+    
+    VkImageSubresourceRange subresourceRange = {};
+    subresourceRange.aspectMask = internal::textureAspectToVkImageAspectFlags(aspect);
+    subresourceRange.baseMipLevel = 0;
+    subresourceRange.levelCount = 1;
+    subresourceRange.baseArrayLayer = 0;
+    subresourceRange.layerCount = tex->layerCount;
+
+    if (subresource != nullptr) {
+        subresourceRange.baseMipLevel = subresource->mipBase;
+        subresourceRange.baseArrayLayer = subresource->layerBase;
+        subresourceRange.layerCount = subresource->layerCount;
+    }
+
+    if (tex->currentLayout != TextureLayout::TransferDst) {
+        VkImageMemoryBarrier barrier = {};
+        barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+        barrier.srcAccessMask = 0;
+        barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+        barrier.oldLayout = internal::textureLayoutToVkImageLayout(tex->currentLayout);
+        barrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+        barrier.srcQueueFamilyIndex = 0;
+        barrier.dstQueueFamilyIndex = 0;
+        barrier.image = tex->vkImage;
+        barrier.subresourceRange = subresourceRange;
+
+        vkCmdPipelineBarrier(dev->vkTransferCommandBuffer, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, nullptr, 0, nullptr, 1, &barrier);
+    }
+
+    VkBufferImageCopy region = {};
+    region.bufferOffset = 0;
+    region.bufferRowLength = 0;
+    region.bufferImageHeight = 0;
+    region.imageSubresource.aspectMask = subresourceRange.aspectMask;
+    region.imageSubresource.mipLevel = subresourceRange.baseMipLevel;
+    region.imageSubresource.baseArrayLayer = subresourceRange.baseArrayLayer;
+    region.imageSubresource.layerCount = subresourceRange.layerCount;
+    region.imageOffset.x = x;
+    region.imageOffset.y = y;
+    region.imageOffset.z = z;
+    region.imageExtent.width = width;
+    region.imageExtent.height = height;
+    region.imageExtent.depth = depth;
+
+    vkCmdCopyBufferToImage(dev->vkTransferCommandBuffer, vkUploadBuffer, tex->vkImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
+
+    if (tex->currentLayout != TextureLayout::Undefined) {
+        VkImageMemoryBarrier barrier = {};
+        barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+        barrier.srcAccessMask = 0;
+        barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+        barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+        barrier.newLayout = internal::textureLayoutToVkImageLayout(tex->currentLayout);
+        barrier.srcQueueFamilyIndex = 0;
+        barrier.dstQueueFamilyIndex = 0;
+        barrier.image = tex->vkImage;
+        barrier.subresourceRange = subresourceRange;
+
+        vkCmdPipelineBarrier(dev->vkTransferCommandBuffer, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, 0, 0, nullptr, 0, nullptr, 1, &barrier);
+    } else {
+        tex->currentLayout = TextureLayout::TransferDst;
+    }
+
+    if (vkEndCommandBuffer(dev->vkTransferCommandBuffer) != VK_SUCCESS) {
+        KOBALT_PRINT(DebugSeverity::Error, &dev->base.obj, "internal Vulkan error; failed to end transfer command buffer");
+        vkDestroyBuffer(dev->vkDevice, vkUploadBuffer, nullptr);
+        vkFreeMemory(dev->vkDevice, vkUploadMemory, nullptr);
+        return false;
+    }
+
+    VkSubmitInfo submitInfo = {};
+    submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+    submitInfo.waitSemaphoreCount = 0;
+    submitInfo.pWaitSemaphores = nullptr;
+    submitInfo.pWaitDstStageMask = nullptr;
+    submitInfo.commandBufferCount = 1;
+    submitInfo.pCommandBuffers = &dev->vkTransferCommandBuffer;
+    submitInfo.signalSemaphoreCount = 0;
+    submitInfo.pSignalSemaphores = nullptr;
+
+    if (vkQueueSubmit(dev->queues.transfer, 1, &submitInfo, dev->vkTransferFence) != VK_SUCCESS) {
+        KOBALT_PRINT(DebugSeverity::Error, &dev->base.obj, "internal Vulkan error; failed to submit transfer command buffer");
+        vkDestroyBuffer(dev->vkDevice, vkUploadBuffer, nullptr);
+        vkFreeMemory(dev->vkDevice, vkUploadMemory, nullptr);
+        return false;
+    }
+
+    if (vkWaitForFences(dev->vkDevice, 1, &dev->vkTransferFence, true, UINT64_MAX) != VK_SUCCESS) {
+        KOBALT_PRINT(DebugSeverity::Warning, &dev->base.obj, "internal Vulkan warning; transfer fence did not successfully wait for transfer operation");
+    }
+
+    vkDestroyBuffer(dev->vkDevice, vkUploadBuffer, nullptr);
+    vkFreeMemory(dev->vkDevice, vkUploadMemory, nullptr);
+
+    vkResetFences(dev->vkDevice, 1, &dev->vkTransferFence);
+    return true;
+}
+
 bool createSampler(Sampler& sampler, Device device, SampleFilter minFilter, SampleFilter magFilter, SampleFilter mipmapFilter, SampleMode sampleModeU, SampleMode sampleModeV, SampleMode sampleModeW, float anisotropy, float minLod, float maxLod) {
     if (device == nullptr) {
         KOBALT_PRINT(DebugSeverity::Error, nullptr, "device is null");
@@ -4606,29 +5003,7 @@ bool copyTextureFromBuffer(Buffer srcBuffer, uint64_t srcOffset, uint32_t srcExt
         return false;
     }
 
-    internal::Device_t* dev = src->device;
-
-    if (vkResetCommandBuffer(dev->vkTransferCommandBuffer, 0) != VK_SUCCESS) {
-        KOBALT_PRINT(DebugSeverity::Error, srcBuffer, "internal Vulkan error; failed to reset transfer command buffer");
-        return false;
-    }
-
-    VkCommandBufferBeginInfo beginInfo = {};
-    beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-
-    if (vkBeginCommandBuffer(dev->vkTransferCommandBuffer, &beginInfo) != VK_SUCCESS) {
-        KOBALT_PRINT(DebugSeverity::Error, srcBuffer, "internal Vulkan error; failed to begin transfer command buffer");
-        return false;
-    }
-
     TextureAspect maxAspect = internal::maximumTextureAspectFromTextureFormat(dst->format);
-    VkImageSubresourceRange subresourceRange = {};
-    subresourceRange.aspectMask = internal::textureAspectToVkImageAspectFlags(maxAspect);
-    subresourceRange.baseMipLevel = 0;
-    subresourceRange.levelCount = 1;
-    subresourceRange.baseArrayLayer = 0;
-    subresourceRange.layerCount = dst->layerCount;
-
     if (dstSubresource != nullptr) {
         if ((dstSubresource->aspect & (TextureAspect::Color | TextureAspect::Depth | TextureAspect::Stencil)) != dstSubresource->aspect) {
             KOBALT_PRINTF(DebugSeverity::Error, dstTexture, "dstSubresource->aspect has invalid value: %u", static_cast<uint32_t>(dstSubresource->aspect));
@@ -4650,7 +5025,51 @@ bool copyTextureFromBuffer(Buffer srcBuffer, uint64_t srcOffset, uint32_t srcExt
             return false;
         }
 
-        subresourceRange.aspectMask = internal::textureAspectToVkImageAspectFlags(dstSubresource->aspect);
+        if ((dstSubresource->aspect & static_cast<TextureAspect>(static_cast<uint32_t>(dstSubresource->aspect) - 1)) != static_cast<TextureAspect>(0)) {
+            KOBALT_PRINTF(DebugSeverity::Error, dstTexture, "dstSubresource->aspect must only have one aspect flag enabled for texture copies/transfers");
+            return false;
+        }
+    }
+
+    internal::Device_t* dev = src->device;
+
+    if (vkResetCommandBuffer(dev->vkTransferCommandBuffer, 0) != VK_SUCCESS) {
+        KOBALT_PRINT(DebugSeverity::Error, srcBuffer, "internal Vulkan error; failed to reset transfer command buffer");
+        return false;
+    }
+
+    VkCommandBufferBeginInfo beginInfo = {};
+    beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+
+    if (vkBeginCommandBuffer(dev->vkTransferCommandBuffer, &beginInfo) != VK_SUCCESS) {
+        KOBALT_PRINT(DebugSeverity::Error, srcBuffer, "internal Vulkan error; failed to begin transfer command buffer");
+        return false;
+    }
+
+    TextureAspect aspect = maxAspect;
+    if (dstSubresource != nullptr) {
+        aspect = dstSubresource->aspect;
+    } else {
+        if ((maxAspect & static_cast<TextureAspect>(static_cast<uint32_t>(maxAspect) - 1)) != static_cast<TextureAspect>(0)) {
+            if ((maxAspect & TextureAspect::Color) == TextureAspect::Color) {
+                aspect = TextureAspect::Color;
+            } else if ((maxAspect & TextureAspect::Depth) == TextureAspect::Depth) {
+                aspect = TextureAspect::Depth;
+            } else {
+                aspect = TextureAspect::Stencil;
+            }
+        }
+    }
+
+    VkImageSubresourceRange subresourceRange = {};
+    subresourceRange.aspectMask = internal::textureAspectToVkImageAspectFlags(maxAspect);
+    subresourceRange.baseMipLevel = 0;
+    subresourceRange.levelCount = 1;
+    subresourceRange.baseArrayLayer = 0;
+    subresourceRange.layerCount = dst->layerCount;
+
+    if (dstSubresource != nullptr) {
+        subresourceRange.aspectMask = internal::textureAspectToVkImageAspectFlags(aspect);
         subresourceRange.baseMipLevel = dstSubresource->mipBase;
         subresourceRange.baseArrayLayer = dstSubresource->layerBase;
         subresourceRange.layerCount = dstSubresource->layerCount;

@@ -7,10 +7,6 @@
     - allocatePipelineResourceSet
     - updatePipelineResourceSet
 
-- ### Resources:
-    - uploadBufferData
-    - uploadTextureData
-
 - ### Commands:
     - bindIndexBuffer
     - drawIndexed
@@ -29,6 +25,8 @@
     - createComputePipeline
 
 - ### Resources:
+    - downloadBufferData
+    - downloadTextureData
     - copyTexture
     - copyBufferFromTexture
     - createBufferView

@@ -106,23 +106,10 @@ int main() {
     int textureWidth, textureHeight, textureComp;
     stbi_uc* textureData = stbi_load("test.png", &textureWidth, &textureHeight, &textureComp, 4);
 
-    kobalt::Buffer textureUploadBuffer;
-    assert(kobalt::createBuffer(textureUploadBuffer, device, textureWidth * textureHeight * 4, kobalt::MemoryLocation::HostLocal, kobalt::BufferUsage::TransferSrc));
-
-    void* mappedTextureUpload;
-    assert(kobalt::mapBuffer(mappedTextureUpload, textureUploadBuffer, 0, textureWidth * textureHeight * 4));
-    memcpy(mappedTextureUpload, textureData, textureWidth * textureHeight * 4);
-    kobalt::unmapBuffer(textureUploadBuffer, mappedTextureUpload);
-
-    stbi_image_free(textureData);
-
     kobalt::Texture texture;
     assert(kobalt::createTexture(texture, device, kobalt::TextureDimensions::Texture2D, textureWidth, textureHeight, 1, 1, 1, 1, kobalt::TextureFormat::RGBA8_UNorm, kobalt::MemoryLocation::DeviceLocal, kobalt::TextureUsage::SampledTexture | kobalt::TextureUsage::TransferDst));
-
-    kobalt::HostSync transferHostSync;
-    assert(kobalt::createHostSync(transferHostSync, device, false));
-
-    assert(kobalt::copyTextureFromBuffer(textureUploadBuffer, 0, 0, 0, texture, kobalt::TextureLayout::TransferDst, 0, 0, 0, textureWidth, textureHeight, 1, nullptr, transferHostSync, nullptr, 0));
+    assert(kobalt::uploadTextureData(texture, 0, 0, 0, textureWidth, textureHeight, 1, nullptr, textureData));
+    stbi_image_free(textureData);
 
     kobalt::TextureView textureView;
     assert(kobalt::createTextureView(textureView, texture, kobalt::TextureFormat::RGBA8_UNorm, kobalt::TextureDimensions::Texture2D, nullptr, nullptr));
@@ -144,22 +131,9 @@ int main() {
          0.0f,  1.0f, 0.001f,     0.5f, 0.0f,     1.0f, 1.0f, 0.0f,
     };
 
-    kobalt::Buffer vertexBufferUpload;
-    assert(kobalt::createBuffer(vertexBufferUpload, device, sizeof(vertexData), kobalt::MemoryLocation::HostLocal, kobalt::BufferUsage::TransferSrc));
-
-    void* vertexUploadMapped;
-    assert(kobalt::mapBuffer(vertexUploadMapped, vertexBufferUpload, 0, sizeof(vertexData)));
-    memcpy(vertexUploadMapped, vertexData, sizeof(vertexData));
-    kobalt::unmapBuffer(vertexBufferUpload, vertexUploadMapped);
-
     kobalt::Buffer vertexBuffer;
     assert(kobalt::createBuffer(vertexBuffer, device, sizeof(vertexData), kobalt::MemoryLocation::DeviceLocal, kobalt::BufferUsage::VertexBuffer | kobalt::BufferUsage::IndexBuffer | kobalt::BufferUsage::TransferDst));
-
-    assert(kobalt::waitForHostSync(transferHostSync, UINT64_MAX));
-    assert(kobalt::resetHostSync(transferHostSync));
-    kobalt::destroy(textureUploadBuffer);
-
-    assert(kobalt::copyBuffer(vertexBufferUpload, 0, vertexBuffer, 0, sizeof(vertexData), transferHostSync, nullptr, 0));
+    assert(kobalt::uploadBufferData(vertexBuffer, 0, vertexData, sizeof(vertexData)));
 
     kobalt::VertexAttribute attributes[3] = {
         { 0, 0, kobalt::VertexAttributeType::Float32, 3, 0 },
@@ -191,38 +165,6 @@ int main() {
     
     kobalt::PipelineResourceLayout pipelineLayout;
     assert(kobalt::createPipelineResourceLayout(pipelineLayout, device, pipelineBindings, 1, nullptr, 0, true));
-
-/* static render pass
-    kobalt::RenderAttachment renderTargetAttachment = {};
-    renderTargetAttachment.format = kobalt::wsi::getSwapchainFormat(swapchain);
-    renderTargetAttachment.sampleCount = 1;
-    renderTargetAttachment.loadOp = kobalt::RenderAttachmentLoadOp::Clear;
-    renderTargetAttachment.storeOp = kobalt::RenderAttachmentStoreOp::Store;
-    renderTargetAttachment.stencilLoadOp = kobalt::RenderAttachmentLoadOp::DontCare;
-    renderTargetAttachment.stencilStoreOp = kobalt::RenderAttachmentStoreOp::DontCare;
-    renderTargetAttachment.initialLayout = kobalt::TextureLayout::RenderTarget;
-    renderTargetAttachment.finalLayout = kobalt::TextureLayout::PresentSrc;
-
-    kobalt::RenderAttachmentState renderAttachmentState;
-    assert(kobalt::createRenderAttachmentState(renderAttachmentState, device, &renderTargetAttachment, 1));
-
-    kobalt::RenderAttachmentReference renderTargetReference = {};
-    renderTargetReference.index = 0;
-    renderTargetReference.layout = kobalt::TextureLayout::RenderTarget;
-
-    kobalt::RenderSubpass renderSubpass;
-    assert(kobalt::createRenderSubpass(renderSubpass, device, nullptr, 0, &renderTargetReference, 1, nullptr));
-
-    kobalt::RenderPass renderPass;
-    assert(kobalt::createRenderPass(renderPass, device, &renderSubpass, 0, renderAttachmentState));
-
-    kobalt::GraphicsPipelineAttachment gpRenderTargetAttachment = {};
-    gpRenderTargetAttachment.format = renderTargetAttachment.format;
-    gpRenderTargetAttachment.sampleCount = renderTargetAttachment.sampleCount;
-
-    kobalt::Pipeline graphicsPipeline;
-    assert(kobalt::createGraphicsPipeline(graphicsPipeline, device, vertexInputState, rasterizationState, vertexShader, pixelShader, nullptr, nullptr, 0, &gpRenderTargetAttachment, 1, nullptr, 0, false, 0));
-*/
 
     kobalt::GraphicsPipelineAttachment graphicsPipelineAttachments[2];
     graphicsPipelineAttachments[0].format = kobalt::wsi::getSwapchainFormat(swapchain);
@@ -256,9 +198,6 @@ int main() {
     kobalt::QueueSync renderFinishedSync;
     assert(kobalt::createQueueSync(renderFinishedSync, device));
     kobalt::setDebugName(renderFinishedSync, "Render Finished Queue Sync");
-
-    assert(kobalt::waitForHostSync(transferHostSync, UINT64_MAX));
-    kobalt::destroy(vertexBufferUpload);
 
     while (!glfwWindowShouldClose(window)) {
         assert(kobalt::waitForHostSync(readyToRenderSync, UINT64_MAX));
@@ -320,7 +259,6 @@ int main() {
         glfwPollEvents();
     }
 
-    kobalt::destroy(transferHostSync);
     kobalt::destroy(renderFinishedSync);
     kobalt::destroy(backbufferAvailableSync);
     kobalt::destroy(readyToRenderSync);

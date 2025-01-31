@@ -13,9 +13,14 @@ struct VertexOut {
     float3 color : COLOR;
 };
 
+[[vk::binding(0)]]
+cbuffer Uniforms {
+    float4x4 mvp;
+};
+
 VertexOut vsmain(VertexIn vin) {
     VertexOut vout;
-    vout.position = float4(vin.position, 1.0);
+    vout.position = mul(mvp, float4(vin.position, 1.0));
     vout.texcoord = vin.texcoord;
     vout.color = vin.color;
     return vout;
@@ -25,14 +30,21 @@ struct PixelOut {
     float4 color : SV_Target;
 };
 
-[[vk::binding(0)]]
+[[vk::binding(1)]]
 Texture2D texture;
 
-[[vk::binding(0)]]
+[[vk::binding(1)]]
 SamplerState textureSampler;
 
 PixelOut psmain(VertexOut vout) {
+    float4 color = texture.Sample(textureSampler, vout.texcoord);
+    
     PixelOut pout;
-    pout.color = float4(texture.Sample(textureSampler, vout.texcoord).xyz, 1.0);
+    pout.color = float4(color.xyz, 1.0);
+    if (color.a == 0.0) {
+        uint2 s = vout.texcoord * 2.0;
+        float3 noTexColor = float3(s.x - s.y, 0.0, s.y - s.x);
+        pout.color = float4(noTexColor, 1.0);
+    }
     return pout;
 }

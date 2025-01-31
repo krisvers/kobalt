@@ -136,14 +136,20 @@ int main() {
         -3.25f,  1.0f, 0.5f,     0.0f, 0.0f,     1.0f, 0.0f, 1.0f,
         -3.25f, -1.0f, 0.5f,     0.0f, 1.0f,     1.0f, 0.0f, 1.0f,
          3.25f, -1.0f, 0.5f,     1.0f, 1.0f,     1.0f, 0.0f, 1.0f,
-         3.25f, -1.0f, 0.5f,     1.0f, 1.0f,     1.0f, 0.0f, 1.0f,
          3.25f,  1.0f, 0.5f,     1.0f, 0.0f,     1.0f, 0.0f, 1.0f,
+         3.25f, -1.0f, 0.5f,     1.0f, 1.0f,     1.0f, 0.0f, 1.0f,
         -3.25f,  1.0f, 0.5f,     0.0f, 0.0f,     1.0f, 0.0f, 1.0f,
+    };
+    
+    uint32_t indexData[] = {
+        0, 1, 2,
+        2, 3, 0,
     };
 
     kobalt::Buffer vertexBuffer;
-    assert(kobalt::createBuffer(vertexBuffer, device, sizeof(vertexData), kobalt::MemoryLocation::DeviceLocal, kobalt::BufferUsage::VertexBuffer | kobalt::BufferUsage::IndexBuffer | kobalt::BufferUsage::TransferDst));
+    assert(kobalt::createBuffer(vertexBuffer, device, sizeof(vertexData) + sizeof(indexData), kobalt::MemoryLocation::DeviceLocal, kobalt::BufferUsage::VertexBuffer | kobalt::BufferUsage::IndexBuffer | kobalt::BufferUsage::TransferDst));
     assert(kobalt::uploadBufferData(vertexBuffer, 0, vertexData, sizeof(vertexData)));
+    assert(kobalt::uploadBufferData(vertexBuffer, sizeof(vertexData), indexData, sizeof(indexData)));
 
     kobalt::Buffer uniformBuffer;
     assert(kobalt::createBuffer(uniformBuffer, device, sizeof(Uniforms), kobalt::MemoryLocation::HostLocal, kobalt::BufferUsage::UniformBuffer));
@@ -291,12 +297,18 @@ int main() {
         resourceTexture.layout = kobalt::TextureLayout::ShaderRead;
 
         assert(kobalt::cmd::beginDynamicRenderPass(commandList, { 0, 0, static_cast<uint32_t>(w), static_cast<uint32_t>(h) }, 1, 0, &attachments[0], 1, &attachments[1], nullptr));
+        
         assert(kobalt::cmd::bindPipeline(commandList, graphicsPipeline));
         assert(kobalt::cmd::pushDynamicPipelineResources(commandList, graphicsPipeline, 0, &resourceTexture, 1, &resourceBuffer, 1, nullptr, 0));
+        
         assert(kobalt::cmd::bindVertexBuffer(commandList, 0, vertexBuffer, 0));
+        assert(kobalt::cmd::bindIndexBuffer(commandList, vertexBuffer, sizeof(vertexData)));
+        
         assert(kobalt::cmd::setViewport(commandList, 0.0f, 0.0f, static_cast<float>(w), static_cast<float>(h), 0.0f, 1.0f));
         assert(kobalt::cmd::setScissor(commandList, 0, 0, w, h));
-        assert(kobalt::cmd::draw(commandList, 0, 6));
+        
+        assert(kobalt::cmd::drawIndexed(commandList, 0, 6));
+        
         assert(kobalt::cmd::endRenderPass(commandList));
 
         kobalt::PipelineStage const finalStage = kobalt::PipelineStage::Bottom;

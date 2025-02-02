@@ -11,6 +11,8 @@ struct VertexOut {
     float4 position : SV_Position;
     float2 texcoord : TEXCOORD;
     float3 color : COLOR;
+    
+    uint instance : SV_InstanceID;
 };
 
 [[vk::binding(0)]]
@@ -31,20 +33,13 @@ struct PixelOut {
 };
 
 [[vk::binding(1)]]
-Texture2D texture;
+Texture2D textures[];
 
 [[vk::binding(1)]]
-SamplerState textureSampler;
+SamplerState textureSamplers[];
 
 PixelOut psmain(VertexOut vout) {
-    float4 color = texture.Sample(textureSampler, vout.texcoord);
-    
     PixelOut pout;
-    pout.color = float4(color.xyz, 1.0);
-    if (color.a == 0.0) {
-        uint2 s = vout.texcoord * 2.0;
-        float3 noTexColor = float3(s.x - s.y, 0.0, s.y - s.x);
-        pout.color = float4(noTexColor, 1.0);
-    }
+    pout.color = textures[vout.instance].Sample(textureSamplers[vout.instance], vout.texcoord);
     return pout;
 }

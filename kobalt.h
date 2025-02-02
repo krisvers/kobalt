@@ -403,6 +403,8 @@ enum class ColorComponentMask {
     G = 0x2,
     B = 0x4,
     A = 0x8,
+
+    All = R | G | B | A,
 };
 
 KOBALT_ENUM_BITMASK(ColorComponentMask);
@@ -592,14 +594,17 @@ struct DeviceSupport {
     bool flipViewport;
     bool dynamicRenderPass;
     bool dynamicPipelineResources;
+    bool pipelineResourceIndexing;
+    bool partiallyBoundPipelineResources;
+    bool variablePipelineResourceArray;
 };
 
 inline bool operator==(DeviceSupport const& a, DeviceSupport const& b) {
-    return (a.swapchain == b.swapchain && a.flipViewport == b.flipViewport && a.dynamicRenderPass == b.dynamicRenderPass && a.dynamicPipelineResources == b.dynamicPipelineResources);
+    return (a.swapchain == b.swapchain && a.flipViewport == b.flipViewport && a.dynamicRenderPass == b.dynamicRenderPass && a.dynamicPipelineResources == b.dynamicPipelineResources && a.pipelineResourceIndexing == b.pipelineResourceIndexing);
 }
 
 inline bool operator<(DeviceSupport const& a, DeviceSupport const& b) {
-    return (a.swapchain < b.swapchain && a.flipViewport < b.flipViewport && a.dynamicRenderPass < b.dynamicRenderPass && a.dynamicPipelineResources < b.dynamicPipelineResources);
+    return (a.swapchain < b.swapchain && a.flipViewport < b.flipViewport && a.dynamicRenderPass < b.dynamicRenderPass && a.dynamicPipelineResources < b.dynamicPipelineResources && a.pipelineResourceIndexing < b.pipelineResourceIndexing);
 }
 
 inline bool operator<=(DeviceSupport const& a, DeviceSupport const& b) {
@@ -734,6 +739,9 @@ struct PipelineResourceBinding {
     PipelineResourceAccess access;
     ShaderStage stages;
     uint32_t arrayLength;
+
+    bool partiallyBoundExt;
+    bool variableArrayExt;
 };
 
 struct PipelinePushConstantRange {
@@ -899,13 +907,13 @@ bool createBlendAttachmentState(BlendAttachmentState& blendAttachmentState, Devi
 bool createBlendState(BlendState& blendState, Device device, BlendAttachmentState const* attachments, uint32_t attachmentCount, bool logicOpEnable, LogicOp logicOp, BlendConstants const* constants);
 
 /* pipeline resources */
-bool createPipelineResourceLayout(PipelineResourceLayout& layout, Device device, PipelineResourceBinding const* bindings, uint32_t bindingCount, PipelinePushConstantRange const* pushConstantRanges, uint32_t pushConstantCount, bool dynamic);
-bool createPipelineResourcePool(PipelineResourcePool& pool, uint32_t maxSets, PipelineResourceAllocationLimit const* resourceLimits, uint32_t resourceLimitCount, bool dynamicUpdate);
+bool createPipelineResourceLayout(PipelineResourceLayout& layout, Device device, PipelineResourceBinding const* bindings, uint32_t bindingCount, PipelinePushConstantRange const* pushConstantRanges, uint32_t pushConstantCount, bool dynamicExt);
+bool createPipelineResourcePool(PipelineResourcePool& pool, uint32_t maxSets, PipelineResourceAllocationLimit const* resourceLimits, uint32_t resourceLimitCount, bool dynamicUpdateExt);
 bool allocatePipelineResourceSet(PipelineResourceSet& set, PipelineResourceLayout layout, PipelineResourcePool pool);
 bool allocatePipelineResourceSets(PipelineResourceSet* sets, PipelineResourceLayout const* layouts, uint32_t setCount, PipelineResourcePool pool);
 bool updatePipelineResourceSet(PipelineResourceSet set, PipelineResourceTextureSampler const* textures, uint32_t textureCount, PipelineResourceBuffer const* buffers, uint32_t bufferCount, PipelineResourceTexelBuffer const* texelBuffers, uint32_t texelBufferCount);
 
-bool createGraphicsPipeline(Pipeline& pipeline, Device device, VertexInputState vertexInputState, TessellationState tessellationState, RasterizationState rasterizationState, DepthStencilState depthStencilState, BlendState blendState, PipelineShader const* vertexShader, PipelineShader const* tessControlShader, PipelineShader const* tessEvalShader, PipelineShader const* geometryShader, PipelineShader const* fragmentShader, PipelineResourceLayout const* layouts, uint32_t layoutCount, GraphicsPipelineAttachment const* inputAttachments, uint32_t inputAttachmentCount, GraphicsPipelineAttachment const* renderTargets, uint32_t renderTargetCount, GraphicsPipelineAttachment const* depthStencilTarget, uint32_t subpass, bool dynamicRenderPass, uint32_t viewMask);
+bool createGraphicsPipeline(Pipeline& pipeline, Device device, VertexInputState vertexInputState, TessellationState tessellationState, RasterizationState rasterizationState, DepthStencilState depthStencilState, BlendState blendState, PipelineShader const* vertexShader, PipelineShader const* tessControlShader, PipelineShader const* tessEvalShader, PipelineShader const* geometryShader, PipelineShader const* fragmentShader, PipelineResourceLayout const* layouts, uint32_t layoutCount, GraphicsPipelineAttachment const* inputAttachments, uint32_t inputAttachmentCount, GraphicsPipelineAttachment const* renderTargets, uint32_t renderTargetCount, GraphicsPipelineAttachment const* depthStencilTarget, uint32_t subpass, bool dynamicRenderPassExt, uint32_t viewMask);
 /* TODO: */ bool createComputePipeline();
 
 bool storePipeline(Pipeline pipeline, void* data, uint64_t* size);
@@ -3279,10 +3287,12 @@ bool enumerateDeviceAdapters(DeviceAdapterInfo& adapterInfo, uint32_t id) {
             adapterInfo.support.swapchain = true;
         } else if (strcmp(e.extensionName, VK_KHR_MAINTENANCE1_EXTENSION_NAME) == 0) {
             adapterInfo.support.flipViewport = true;
-        } else if(strcmp(e.extensionName, VK_KHR_DYNAMIC_RENDERING_EXTENSION_NAME) == 0) {
+        } else if (strcmp(e.extensionName, VK_KHR_DYNAMIC_RENDERING_EXTENSION_NAME) == 0) {
             adapterInfo.support.dynamicRenderPass = true;
-        } else if(strcmp(e.extensionName, VK_KHR_PUSH_DESCRIPTOR_EXTENSION_NAME) == 0) {
+        } else if (strcmp(e.extensionName, VK_KHR_PUSH_DESCRIPTOR_EXTENSION_NAME) == 0) {
             adapterInfo.support.dynamicPipelineResources = true;
+        } else if (strcmp(e.extensionName, VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME) == 0) {
+            adapterInfo.support.pipelineResourceIndexing = true;
         }
     }
 
@@ -3363,6 +3373,10 @@ bool createDevice(Device& device, uint32_t id, DeviceSupport support) {
             availableSupport.dynamicRenderPass = true;
         } else if (strcmp(e.extensionName, VK_KHR_PUSH_DESCRIPTOR_EXTENSION_NAME) == 0) {
             availableSupport.dynamicPipelineResources = true;
+        } else if (strcmp(e.extensionName, VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME) == 0) {
+            availableSupport.pipelineResourceIndexing = true;
+            availableSupport.partiallyBoundPipelineResources = true;
+            availableSupport.variablePipelineResourceArray = true;
         }
     }
 
@@ -3386,6 +3400,10 @@ bool createDevice(Device& device, uint32_t id, DeviceSupport support) {
 
     if (support.dynamicPipelineResources) {
         extensions.push_back(VK_KHR_PUSH_DESCRIPTOR_EXTENSION_NAME);
+    }
+
+    if (support.pipelineResourceIndexing || support.partiallyBoundPipelineResources || support.variablePipelineResourceArray) {
+        extensions.push_back(VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME);
     }
     
 #ifdef __APPLE__
@@ -3488,6 +3506,20 @@ bool createDevice(Device& device, uint32_t id, DeviceSupport support) {
     drFeatures.dynamicRendering = support.dynamicRenderPass;
     if (support.dynamicRenderPass) {
         enabledFeatures.push_back(reinterpret_cast<internal::EnabledFeaturesX*>(&drFeatures));
+    }
+
+    VkPhysicalDeviceDescriptorIndexingFeaturesEXT diFeatures = {};
+    diFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_FEATURES_EXT;
+    diFeatures.shaderSampledImageArrayNonUniformIndexing = support.pipelineResourceIndexing;
+    diFeatures.shaderStorageImageArrayNonUniformIndexing = support.pipelineResourceIndexing;
+    diFeatures.shaderUniformBufferArrayNonUniformIndexing = support.pipelineResourceIndexing;
+    diFeatures.shaderStorageBufferArrayNonUniformIndexing = support.pipelineResourceIndexing;
+    diFeatures.shaderUniformTexelBufferArrayNonUniformIndexing = support.pipelineResourceIndexing;
+    diFeatures.shaderStorageTexelBufferArrayNonUniformIndexing = support.pipelineResourceIndexing;
+    diFeatures.descriptorBindingPartiallyBound = support.partiallyBoundPipelineResources;
+    diFeatures.runtimeDescriptorArray = support.variablePipelineResourceArray;
+    if (support.pipelineResourceIndexing) {
+        enabledFeatures.push_back(reinterpret_cast<internal::EnabledFeaturesX*>(&diFeatures));
     }
     
     void* pNext = nullptr;
@@ -3979,7 +4011,7 @@ bool createBlendState(BlendState& blendState, Device device, BlendAttachmentStat
     return true;
 }
 
-bool createPipelineResourceLayout(PipelineResourceLayout& layout, Device device, PipelineResourceBinding const* bindings, uint32_t bindingCount, PipelinePushConstantRange const* pushConstantRanges, uint32_t pushConstantCount, bool dynamic) {
+bool createPipelineResourceLayout(PipelineResourceLayout& layout, Device device, PipelineResourceBinding const* bindings, uint32_t bindingCount, PipelinePushConstantRange const* pushConstantRanges, uint32_t pushConstantCount, bool dynamicExt) {
     if (device == nullptr) {
         KOBALT_PRINT(DebugSeverity::Error, nullptr, "device is null");
         return false;
@@ -3987,6 +4019,7 @@ bool createPipelineResourceLayout(PipelineResourceLayout& layout, Device device,
 
     VkDescriptorSetLayoutBinding const* pDescBindings = nullptr;
     std::vector<VkDescriptorSetLayoutBinding> descBindings(bindingCount);
+    std::vector<VkDescriptorBindingFlags> bindingFlags(bindingCount, 0);
     if (bindings != nullptr) {
         for (uint32_t i = 0; i < bindingCount; ++i) {
             if (internal::pipelineResourceTypeAndPipelineResourceAcccessToVkDescriptorType(bindings[i].type, bindings[i].access) == VK_DESCRIPTOR_TYPE_MAX_ENUM) {
@@ -3998,12 +4031,14 @@ bool createPipelineResourceLayout(PipelineResourceLayout& layout, Device device,
                 KOBALT_PRINTF(DebugSeverity::Error, device, "bindings[%u].stages has invalid value: %u", i, static_cast<uint32_t>(bindings[i].stages));
                 return false;
             }
-            
+
             descBindings[i].binding = bindings[i].binding;
             descBindings[i].descriptorType = internal::pipelineResourceTypeAndPipelineResourceAcccessToVkDescriptorType(bindings[i].type, bindings[i].access);
             descBindings[i].descriptorCount = bindings[i].arrayLength == 0 ? 1 : bindings[i].arrayLength;
             descBindings[i].stageFlags = internal::shaderStageToVkShaderStageFlags(bindings[i].stages);
             descBindings[i].pImmutableSamplers = nullptr;
+
+            bindingFlags[i] = bindings[i].partiallyBoundExt ? VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT_EXT : 0 | bindings[i].variableArrayExt ? VK_DESCRIPTOR_BINDING_VARIABLE_DESCRIPTOR_COUNT_BIT_EXT : 0;
         }
         
         pDescBindings = descBindings.data();
@@ -4027,10 +4062,16 @@ bool createPipelineResourceLayout(PipelineResourceLayout& layout, Device device,
     }
     
     internal::Device_t* dev = reinterpret_cast<internal::Device_t*>(device);
+
+    VkDescriptorSetLayoutBindingFlagsCreateInfoEXT bindingFlagsCI = {};
+    bindingFlagsCI.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_BINDING_FLAGS_CREATE_INFO_EXT;
+    bindingFlagsCI.bindingCount = bindingCount;
+    bindingFlagsCI.pBindingFlags = bindingFlags.data();
     
     VkDescriptorSetLayoutCreateInfo descLayoutCI = {};
     descLayoutCI.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-    descLayoutCI.flags = dynamic ? VK_DESCRIPTOR_SET_LAYOUT_CREATE_PUSH_DESCRIPTOR_BIT_KHR : 0;
+    descLayoutCI.pNext = &bindingFlagsCI;
+    descLayoutCI.flags = dynamicExt ? VK_DESCRIPTOR_SET_LAYOUT_CREATE_PUSH_DESCRIPTOR_BIT_KHR : 0;
     descLayoutCI.bindingCount = pDescBindings == nullptr ? 0 : bindingCount;
     descLayoutCI.pBindings = pDescBindings;
     
@@ -4044,7 +4085,7 @@ bool createPipelineResourceLayout(PipelineResourceLayout& layout, Device device,
     return true;
 }
 
-bool createGraphicsPipeline(Pipeline& pipeline, Device device, VertexInputState vertexInputState, TessellationState tessellationState, RasterizationState rasterizationState, DepthStencilState depthStencilState, BlendState blendState, PipelineShader const* vertexShader, PipelineShader const* tessControlShader, PipelineShader const* tessEvalShader, PipelineShader const* geometryShader, PipelineShader const* fragmentShader, PipelineResourceLayout const* layouts, uint32_t layoutCount, GraphicsPipelineAttachment const* inputAttachments, uint32_t inputAttachmentCount, GraphicsPipelineAttachment const* renderTargets, uint32_t renderTargetCount, GraphicsPipelineAttachment const* depthStencilTarget, uint32_t subpass, bool dynamicRenderPass, uint32_t viewMask) {
+bool createGraphicsPipeline(Pipeline& pipeline, Device device, VertexInputState vertexInputState, TessellationState tessellationState, RasterizationState rasterizationState, DepthStencilState depthStencilState, BlendState blendState, PipelineShader const* vertexShader, PipelineShader const* tessControlShader, PipelineShader const* tessEvalShader, PipelineShader const* geometryShader, PipelineShader const* fragmentShader, PipelineResourceLayout const* layouts, uint32_t layoutCount, GraphicsPipelineAttachment const* inputAttachments, uint32_t inputAttachmentCount, GraphicsPipelineAttachment const* renderTargets, uint32_t renderTargetCount, GraphicsPipelineAttachment const* depthStencilTarget, uint32_t subpass, bool dynamicRenderPassExt, uint32_t viewMask) {
     if (device == nullptr) {
         KOBALT_PRINT(DebugSeverity::Error, nullptr, "device is null");
         return false;
@@ -4187,7 +4228,7 @@ bool createGraphicsPipeline(Pipeline& pipeline, Device device, VertexInputState 
     /* TODO: internal::TessellationState_t* internalTessellationState = reinterpret_cast<internal::TessellationState_t*>(tessellationState); */
     internal::RasterizationState_t* internalRasterizationState = reinterpret_cast<internal::RasterizationState_t*>(rasterizationState);
     internal::DepthStencilState_t* internalDepthStencilState = reinterpret_cast<internal::DepthStencilState_t*>(depthStencilState);
-    /* TODO: internal::BlendState_t* internalBlendState = reinterpret_cast<internal::BlendState_t*>(blendState); */
+    internal::BlendState_t* internalBlendState = reinterpret_cast<internal::BlendState_t*>(blendState);
     
     internal::PipelineResourceLayout_t const* const* internalPipelineResourceLayout = reinterpret_cast<internal::PipelineResourceLayout_t const* const*>(layouts);
 
@@ -4297,7 +4338,7 @@ bool createGraphicsPipeline(Pipeline& pipeline, Device device, VertexInputState 
 
     VkGraphicsPipelineCreateInfo graphicsPipelineCI = {};
     graphicsPipelineCI.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
-    graphicsPipelineCI.pNext = dynamicRenderPass ? &renderingCI : nullptr;
+    graphicsPipelineCI.pNext = dynamicRenderPassExt ? &renderingCI : nullptr;
     graphicsPipelineCI.stageCount = static_cast<uint32_t>(stages.size());
     graphicsPipelineCI.pStages = stages.data();
     graphicsPipelineCI.pVertexInputState = internalVertexInputState == nullptr ? &defaultVertexInputCI : &internalVertexInputState->vertexInputCI;
@@ -4307,7 +4348,7 @@ bool createGraphicsPipeline(Pipeline& pipeline, Device device, VertexInputState 
     graphicsPipelineCI.pRasterizationState = internalRasterizationState == nullptr ? &defaultRasterizationCI : &internalRasterizationState->createInfo;
     graphicsPipelineCI.pMultisampleState = /* TODO: */ &defaultMultisampleCI;
     graphicsPipelineCI.pDepthStencilState = internalDepthStencilState == nullptr ? (depthStencilTarget ? &defaultDepthStencilState : nullptr) : &internalDepthStencilState->createInfo;
-    graphicsPipelineCI.pColorBlendState = /* TODO: */ &defaultBlendCI;
+    graphicsPipelineCI.pColorBlendState = internalBlendState == nullptr ? &defaultBlendCI : &internalBlendState->createInfo;
     graphicsPipelineCI.pDynamicState = &dynamicCI;
     graphicsPipelineCI.layout = vkPipelineLayout;
     graphicsPipelineCI.renderPass = /* TODO: */ nullptr;

@@ -16,6 +16,7 @@
 #include <iostream>
 #include <vector>
 #include <fstream>
+#include <filesystem>
 
 void formatMemorySize(uint64_t& size, char& suffix, bool decimal) {
     char suffixes[] = { 'B', 'K', 'M', 'G', 'T' };
@@ -50,6 +51,31 @@ bool loadShader(kobalt::Shader& shader, kobalt::Device device, const char* path)
 struct Uniforms {
     mat4x4 mvp;
 };
+
+struct TextureResource {
+    kobalt::Texture texture;
+    kobalt::TextureView view;
+};
+
+void loadTextures(std::vector<TextureResource> textures, kobalt::Device device) {
+    std::filesystem::path const path("working/textures");
+    for (std::filesystem::directory_entry const& entry : std::filesystem::directory_iterator(path)) {
+        int textureWidth, textureHeight, textureComp;
+        stbi_uc* textureData = stbi_load(entry.path().string().c_str(), &textureWidth, &textureHeight, &textureComp, 4);
+
+        if (textureData == nullptr) {
+            continue;
+        }
+
+        kobalt::Texture texture;
+        assert(kobalt::createTexture(texture, device, kobalt::TextureDimensions::Texture2D, textureWidth, textureHeight, 1, 1, 1, 1, kobalt::TextureFormat::RGBA8_UNorm, kobalt::MemoryLocation::DeviceLocal, kobalt::TextureUsage::SampledTexture | kobalt::TextureUsage::TransferDst));
+        assert(kobalt::uploadTextureData(texture, 0, 0, 0, textureWidth, textureHeight, 1, nullptr, textureData));
+        stbi_image_free(textureData);
+
+        kobalt::TextureView view;
+        assert(kobalt::createTextureView(view, texture, kobalt::TextureFormat::RGBA8_UNorm, kobalt::TextureDimensions::Texture2D, nullptr, nullptr));
+    }
+}
 
 int main() {
     assert(glfwInit());
@@ -88,8 +114,17 @@ int main() {
         std::cout << "    other memory: " << memSize << suffix << std::endl;
     }
 
+    kobalt::DeviceSupport support = {};
+    support.swapchain = true;
+    support.flipViewport = true;
+    support.dynamicRenderPass = true;
+    support.dynamicPipelineResources = true;
+    support.pipelineResourceIndexing = true;
+    support.partiallyBoundPipelineResources = true;
+    support.variablePipelineResourceArray = true;
+
     kobalt::Device device;
-    assert(kobalt::createDevice(device, 0, { true, true, true, true }));
+    assert(kobalt::createDevice(device, 0, support));
     kobalt::setDebugName(device, "Device");
 
     int w, h;
@@ -111,15 +146,10 @@ int main() {
     assert(kobalt::createTextureView(depthTextureView, depthTexture, kobalt::TextureFormat::D16_UNorm, kobalt::TextureDimensions::Texture2D, nullptr, nullptr));
 
     int textureWidth, textureHeight, textureComp;
-    stbi_uc* textureData = stbi_load("logo.png", &textureWidth, &textureHeight, &textureComp, 4);
+    stbi_uc* textureData = stbi_load("1.png", &textureWidth, &textureHeight, &textureComp, 4);
 
-    kobalt::Texture texture;
-    assert(kobalt::createTexture(texture, device, kobalt::TextureDimensions::Texture2D, textureWidth, textureHeight, 1, 1, 1, 1, kobalt::TextureFormat::RGBA8_UNorm, kobalt::MemoryLocation::DeviceLocal, kobalt::TextureUsage::SampledTexture | kobalt::TextureUsage::TransferDst));
-    assert(kobalt::uploadTextureData(texture, 0, 0, 0, textureWidth, textureHeight, 1, nullptr, textureData));
-    stbi_image_free(textureData);
-
-    kobalt::TextureView textureView;
-    assert(kobalt::createTextureView(textureView, texture, kobalt::TextureFormat::RGBA8_UNorm, kobalt::TextureDimensions::Texture2D, nullptr, nullptr));
+    std::vector<TextureResource> textures;
+    loadTextures(textures, device);
 
     kobalt::Sampler sampler;
     assert(kobalt::createSampler(sampler, device, kobalt::SampleFilter::Nearest, kobalt::SampleFilter::Nearest, kobalt::SampleFilter::Nearest, kobalt::SampleMode::Clamp, kobalt::SampleMode::Clamp, kobalt::SampleMode::Clamp, 1.0f, 0.0f, 0.0f));
@@ -176,10 +206,11 @@ int main() {
     assert(kobalt::createDepthStencilState(depthStencilState, device, true, true, kobalt::CompareOp::Greater, false, nullptr, nullptr));
 
     kobalt::BlendAttachmentState blendAttachment;
-    assert(kobalt::createBlendAttachmentState(blendAttachment, device, true, kobalt::BlendFactor::SrcAlpha, kobalt::BlendFactor::InvSrcAlpha, kobalt::BlendOp::Add, kobalt::BlendFactor::One, kobalt::BlendFactor::Zero, kobalt::BlendOp::Add, kobalt::ColorComponentMask::None));
+    assert(kobalt::createBlendAttachmentState(blendAttachment, device, true, kobalt::BlendFactor::SrcAlpha, kobalt::BlendFactor::InvSrcAlpha, kobalt::BlendOp::Add, kobalt::BlendFactor::One, kobalt::BlendFactor::Zero, kobalt::BlendOp::Add, kobalt::ColorComponentMask::All));
     
     kobalt::BlendState blendState;
-    assert(kobalt::createBlendState(blendState, device, &blendAttachment, 1, false, kobalt::LogicOp::NoOp, nullptr));
+    assert(kobalt::createBlendState(blendState, device, &blendAttachment, 1, false, kobalt::LogicOp::Clear, nullptr));
+    kobalt::destroy(blendAttachment);
 
     kobalt::PipelineResourceBinding pipelineBindings[2];
     pipelineBindings[0].binding = 0;
@@ -191,7 +222,9 @@ int main() {
     pipelineBindings[1].type = kobalt::PipelineResourceType::TextureAndSampler;
     pipelineBindings[1].access = kobalt::PipelineResourceAccess::Sampled;
     pipelineBindings[1].stages = kobalt::ShaderStage::Pixel;
-    pipelineBindings[1].arrayLength = 0;
+    pipelineBindings[1].arrayLength = 31;
+    pipelineBindings[1].partiallyBoundExt = true;
+    pipelineBindings[1].variableArrayExt = true;
     
     kobalt::PipelineResourceLayout pipelineLayout;
     assert(kobalt::createPipelineResourceLayout(pipelineLayout, device, pipelineBindings, 2, nullptr, 0, true));
@@ -212,6 +245,11 @@ int main() {
 
     kobalt::Pipeline graphicsPipeline;
     assert(kobalt::createGraphicsPipeline(graphicsPipeline, device, vertexInputState, nullptr, rasterizationState, depthStencilState, blendState, &pipelineVS, nullptr, nullptr, nullptr, &pipelinePS, &pipelineLayout, 1, nullptr, 0, &graphicsPipelineAttachments[0], 1, &graphicsPipelineAttachments[1], 0, true, 0));
+
+    kobalt::destroy(blendState);
+    kobalt::destroy(depthStencilState);
+    kobalt::destroy(rasterizationState);
+    kobalt::destroy(vertexInputState);
 
     kobalt::CommandList commandList;
     assert(kobalt::createCommandList(commandList, device, kobalt::QueueType::Graphics, false));
@@ -262,7 +300,9 @@ int main() {
         assert(kobalt::beginRecordingCommandList(commandList));
 
         assert(kobalt::cmd::executionBarrier(commandList, kobalt::PipelineStage::Top, kobalt::PipelineStage::PixelShader));
-        assert(kobalt::cmd::textureBarrier(commandList, kobalt::ResourceAccess::None, kobalt::ResourceAccess::ShaderRead, kobalt::QueueTransfer::Identity, kobalt::QueueTransfer::Identity, kobalt::TextureLayout::Undefined, kobalt::TextureLayout::ShaderRead, texture, nullptr));
+        for (TextureResource const& r : textures) {
+            assert(kobalt::cmd::textureBarrier(commandList, kobalt::ResourceAccess::None, kobalt::ResourceAccess::ShaderRead, kobalt::QueueTransfer::Identity, kobalt::QueueTransfer::Identity, kobalt::TextureLayout::Undefined, kobalt::TextureLayout::ShaderRead, r.texture, nullptr));
+        }
 
         assert(kobalt::cmd::executionBarrier(commandList, kobalt::PipelineStage::Top, kobalt::PipelineStage::RenderTarget));
         assert(kobalt::cmd::textureBarrier(commandList, kobalt::ResourceAccess::None, kobalt::ResourceAccess::RenderTargetWrite, kobalt::QueueTransfer::Identity, kobalt::QueueTransfer::Identity, kobalt::TextureLayout::Undefined, kobalt::TextureLayout::RenderTarget, backbuffer, nullptr));
@@ -292,20 +332,22 @@ int main() {
         resourceBuffer.range = sizeof(Uniforms);
         resourceBuffer.buffer = uniformBuffer;
 
-        kobalt::PipelineResourceTextureSampler resourceTexture = {};
-        resourceTexture.binding = 1;
-        resourceTexture.elementBase = 0;
-        resourceTexture.elementCount = 1;
-        resourceTexture.type = kobalt::PipelineResourceType::TextureAndSampler;
-        resourceTexture.access = kobalt::PipelineResourceAccess::Sampled;
-        resourceTexture.sampler = sampler;
-        resourceTexture.view = textureView;
-        resourceTexture.layout = kobalt::TextureLayout::ShaderRead;
+        std::vector<kobalt::PipelineResourceTextureSampler> resourceTextures(textures.size());
+        for (size_t i = 0; i < textures.size(); ++i) {
+            resourceTextures[i].binding = 1;
+            resourceTextures[i].elementBase = i;
+            resourceTextures[i].elementCount = textures.size();
+            resourceTextures[i].type = kobalt::PipelineResourceType::TextureAndSampler;
+            resourceTextures[i].access = kobalt::PipelineResourceAccess::Sampled;
+            resourceTextures[i].sampler = sampler;
+            resourceTextures[i].view = textures[i].view;
+            resourceTextures[i].layout = kobalt::TextureLayout::ShaderRead;
+        }
 
         assert(kobalt::cmd::beginDynamicRenderPass(commandList, { 0, 0, static_cast<uint32_t>(w), static_cast<uint32_t>(h) }, 1, 0, &attachments[0], 1, &attachments[1], nullptr));
         
         assert(kobalt::cmd::bindPipeline(commandList, graphicsPipeline));
-        assert(kobalt::cmd::pushDynamicPipelineResources(commandList, graphicsPipeline, 0, &resourceTexture, 1, &resourceBuffer, 1, nullptr, 0));
+        assert(kobalt::cmd::pushDynamicPipelineResources(commandList, graphicsPipeline, 0, resourceTextures.data(), static_cast<uint32_t>(resourceTextures.size()), &resourceBuffer, 1, nullptr, 0));
         
         assert(kobalt::cmd::bindVertexBuffer(commandList, 0, vertexBuffer, 0));
         assert(kobalt::cmd::bindIndexBuffer(commandList, vertexBuffer, sizeof(vertexData), kobalt::IndexType::Uint32));
@@ -336,16 +378,17 @@ int main() {
     kobalt::destroy(commandList);
     kobalt::destroy(graphicsPipeline);
     kobalt::destroy(pipelineLayout);
-    kobalt::destroy(depthStencilState);
-    kobalt::destroy(rasterizationState);
-    kobalt::destroy(vertexInputState);
     kobalt::destroy(uniformBuffer);
     kobalt::destroy(vertexBuffer);
     kobalt::destroy(vertexShader);
     kobalt::destroy(pixelShader);
     kobalt::destroy(sampler);
-    kobalt::destroy(textureView);
-    kobalt::destroy(texture);
+
+    for (TextureResource const& r : textures) {
+        kobalt::destroy(r.view);
+        kobalt::destroy(r.texture);
+    }
+
     kobalt::destroy(depthTextureView);
     kobalt::destroy(depthTexture);
     kobalt::destroy(backbufferView);

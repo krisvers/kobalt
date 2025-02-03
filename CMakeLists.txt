@@ -12,4 +12,4 @@ target_include_directories(kobalt PRIVATE ${Vulkan_INCLUDE_DIRS})
 
 target_link_libraries(kobalt PRIVATE glfw)
 
-set_property(TARGET kobalt PROPERTY CXX_STANDARD 11)
+set_property(TARGET kobalt PROPERTY CXX_STANDARD 17)

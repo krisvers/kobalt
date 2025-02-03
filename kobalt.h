@@ -3517,6 +3517,7 @@ bool createDevice(Device& device, uint32_t id, DeviceSupport support) {
     diFeatures.shaderUniformTexelBufferArrayNonUniformIndexing = support.pipelineResourceIndexing;
     diFeatures.shaderStorageTexelBufferArrayNonUniformIndexing = support.pipelineResourceIndexing;
     diFeatures.descriptorBindingPartiallyBound = support.partiallyBoundPipelineResources;
+    diFeatures.descriptorBindingVariableDescriptorCount = support.variablePipelineResourceArray;
     diFeatures.runtimeDescriptorArray = support.variablePipelineResourceArray;
     if (support.pipelineResourceIndexing) {
         enabledFeatures.push_back(reinterpret_cast<internal::EnabledFeaturesX*>(&diFeatures));
@@ -4038,7 +4039,7 @@ bool createPipelineResourceLayout(PipelineResourceLayout& layout, Device device,
             descBindings[i].stageFlags = internal::shaderStageToVkShaderStageFlags(bindings[i].stages);
             descBindings[i].pImmutableSamplers = nullptr;
 
-            bindingFlags[i] = bindings[i].partiallyBoundExt ? VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT_EXT : 0 | bindings[i].variableArrayExt ? VK_DESCRIPTOR_BINDING_VARIABLE_DESCRIPTOR_COUNT_BIT_EXT : 0;
+            bindingFlags[i] = (bindings[i].partiallyBoundExt ? VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT_EXT : 0) | (bindings[i].variableArrayExt && !dynamicExt ? VK_DESCRIPTOR_BINDING_VARIABLE_DESCRIPTOR_COUNT_BIT_EXT : 0);
         }
         
         pDescBindings = descBindings.data();

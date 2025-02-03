@@ -58,11 +58,10 @@ struct TextureResource {
 };
 
 void loadTextures(std::vector<TextureResource> textures, kobalt::Device device) {
-    std::filesystem::path const path("working/textures");
+    std::filesystem::path const path("textures");
     for (std::filesystem::directory_entry const& entry : std::filesystem::directory_iterator(path)) {
         int textureWidth, textureHeight, textureComp;
         stbi_uc* textureData = stbi_load(entry.path().string().c_str(), &textureWidth, &textureHeight, &textureComp, 4);
-
         if (textureData == nullptr) {
             continue;
         }

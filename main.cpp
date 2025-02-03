@@ -6,6 +6,7 @@
 #define KOBALT_DEFAULT_DEBUG_MESSENGER
 #include "kobalt.h"
 
+#define STBI_FAILURE_USERMSG
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
 
@@ -57,22 +58,28 @@ struct TextureResource {
     kobalt::TextureView view;
 };
 
-void loadTextures(std::vector<TextureResource> textures, kobalt::Device device) {
+void loadTextures(std::vector<TextureResource>& textures, kobalt::Device device) {
     std::filesystem::path const path("textures");
     for (std::filesystem::directory_entry const& entry : std::filesystem::directory_iterator(path)) {
         int textureWidth, textureHeight, textureComp;
         stbi_uc* textureData = stbi_load(entry.path().string().c_str(), &textureWidth, &textureHeight, &textureComp, 4);
         if (textureData == nullptr) {
+            std::cout << "Failed to load " << entry.path().string() << ": " << stbi_failure_reason() << std::endl;
             continue;
         }
 
         kobalt::Texture texture;
         assert(kobalt::createTexture(texture, device, kobalt::TextureDimensions::Texture2D, textureWidth, textureHeight, 1, 1, 1, 1, kobalt::TextureFormat::RGBA8_UNorm, kobalt::MemoryLocation::DeviceLocal, kobalt::TextureUsage::SampledTexture | kobalt::TextureUsage::TransferDst));
+        kobalt::setDebugName(texture, entry.path().string().c_str());
+
         assert(kobalt::uploadTextureData(texture, 0, 0, 0, textureWidth, textureHeight, 1, nullptr, textureData));
         stbi_image_free(textureData);
 
         kobalt::TextureView view;
         assert(kobalt::createTextureView(view, texture, kobalt::TextureFormat::RGBA8_UNorm, kobalt::TextureDimensions::Texture2D, nullptr, nullptr));
+        kobalt::setDebugName(view, entry.path().string().c_str());
+
+        textures.push_back({ texture, view });
     }
 }
 
@@ -144,9 +151,6 @@ int main() {
     kobalt::TextureView depthTextureView;
     assert(kobalt::createTextureView(depthTextureView, depthTexture, kobalt::TextureFormat::D16_UNorm, kobalt::TextureDimensions::Texture2D, nullptr, nullptr));
 
-    int textureWidth, textureHeight, textureComp;
-    stbi_uc* textureData = stbi_load("1.png", &textureWidth, &textureHeight, &textureComp, 4);
-
     std::vector<TextureResource> textures;
     loadTextures(textures, device);
 
@@ -216,12 +220,12 @@ int main() {
     pipelineBindings[0].type = kobalt::PipelineResourceType::Buffer;
     pipelineBindings[0].access = kobalt::PipelineResourceAccess::Uniform;
     pipelineBindings[0].stages = kobalt::ShaderStage::Vertex;
-    pipelineBindings[0].arrayLength = 0;
+    pipelineBindings[0].arrayLength = 1;
     pipelineBindings[1].binding = 1;
     pipelineBindings[1].type = kobalt::PipelineResourceType::TextureAndSampler;
     pipelineBindings[1].access = kobalt::PipelineResourceAccess::Sampled;
     pipelineBindings[1].stages = kobalt::ShaderStage::Pixel;
-    pipelineBindings[1].arrayLength = 31;
+    pipelineBindings[1].arrayLength = 15;
     pipelineBindings[1].partiallyBoundExt = true;
     pipelineBindings[1].variableArrayExt = true;
     
@@ -274,7 +278,7 @@ int main() {
         mat4x4 m;
         mat4x4_identity(m);
         mat4x4_rotate_Z(m, m, glfwGetTime());
-        mat4x4_scale_aniso(m, m, 0.125f, 0.125f, 0.125f);
+        mat4x4_scale_aniso(m, m, 0.05f, 0.05f, 0.05f);
 
         float n = -1.0f;
         float f = 1.0f;
@@ -335,7 +339,7 @@ int main() {
         for (size_t i = 0; i < textures.size(); ++i) {
             resourceTextures[i].binding = 1;
             resourceTextures[i].elementBase = i;
-            resourceTextures[i].elementCount = textures.size();
+            resourceTextures[i].elementCount = 1;
             resourceTextures[i].type = kobalt::PipelineResourceType::TextureAndSampler;
             resourceTextures[i].access = kobalt::PipelineResourceAccess::Sampled;
             resourceTextures[i].sampler = sampler;
@@ -354,6 +358,8 @@ int main() {
         assert(kobalt::cmd::setViewport(commandList, 0.0f, 0.0f, static_cast<float>(w), static_cast<float>(h), 0.0f, 1.0f));
         assert(kobalt::cmd::setScissor(commandList, 0, 0, w, h));
         
+        assert(kobalt::cmd::drawIndexed(commandList, 0, 0, 6));
+
         assert(kobalt::cmd::drawIndexed(commandList, 0, 0, 6));
         
         assert(kobalt::cmd::endRenderPass(commandList));

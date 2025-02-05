@@ -185,7 +185,7 @@ int main() {
     assert(kobalt::uploadBufferData(vertexBuffer, sizeof(vertexData), indexData, sizeof(indexData)));
 
     kobalt::Buffer uniformBuffer;
-    assert(kobalt::createBuffer(uniformBuffer, device, sizeof(Uniforms), kobalt::MemoryLocation::HostLocal, kobalt::BufferUsage::UniformBuffer));
+    assert(kobalt::createBuffer(uniformBuffer, device, sizeof(Uniforms) * textures.size(), kobalt::MemoryLocation::HostLocal, kobalt::BufferUsage::UniformBuffer));
 
     kobalt::VertexAttribute attributes[3] = {
         { 0, 0, kobalt::VertexAttributeType::Float32, 3, 0 },
@@ -220,12 +220,12 @@ int main() {
     pipelineBindings[0].type = kobalt::PipelineResourceType::Buffer;
     pipelineBindings[0].access = kobalt::PipelineResourceAccess::Uniform;
     pipelineBindings[0].stages = kobalt::ShaderStage::Vertex;
-    pipelineBindings[0].arrayLength = 1;
+    pipelineBindings[0].arrayLength = 8;
     pipelineBindings[1].binding = 1;
     pipelineBindings[1].type = kobalt::PipelineResourceType::TextureAndSampler;
     pipelineBindings[1].access = kobalt::PipelineResourceAccess::Sampled;
     pipelineBindings[1].stages = kobalt::ShaderStage::Pixel;
-    pipelineBindings[1].arrayLength = 15;
+    pipelineBindings[1].arrayLength = 8;
     pipelineBindings[1].partiallyBoundExt = true;
     pipelineBindings[1].variableArrayExt = true;
     
@@ -291,8 +291,14 @@ int main() {
         
         Uniforms uniforms = {};
         mat4x4_mul(uniforms.mvp, p, m);
-        
         memcpy(mappedUniformBuffer, &uniforms, sizeof(Uniforms));
+
+        mat4x4_translate(m, 0.5f, 0.0f, 0.0f);
+        mat4x4_rotate_Z(m, m, -glfwGetTime());
+        mat4x4_scale_aniso(m, m, 0.15f, 0.15f, 0.15f);
+
+        mat4x4_mul(uniforms.mvp, p, m);
+        memcpy(reinterpret_cast<Uniforms*>(mappedUniformBuffer) + 1, &uniforms, sizeof(Uniforms));
 
         assert(kobalt::waitForHostSync(readyToRenderSync, UINT64_MAX));
         assert(kobalt::resetHostSync(readyToRenderSync));
@@ -325,18 +331,18 @@ int main() {
         attachments[1].storeOp = kobalt::RenderAttachmentStoreOp::DontCare;
         attachments[1].clearValue.depthStencil.depth = 0.0f;
 
-        kobalt::PipelineResourceBuffer resourceBuffer = {};
-        resourceBuffer.binding = 0;
-        resourceBuffer.elementBase = 0;
-        resourceBuffer.elementCount = 1;
-        resourceBuffer.type = kobalt::PipelineResourceType::Buffer;
-        resourceBuffer.access = kobalt::PipelineResourceAccess::Uniform;
-        resourceBuffer.offset = 0;
-        resourceBuffer.range = sizeof(Uniforms);
-        resourceBuffer.buffer = uniformBuffer;
-
+        std::vector<kobalt::PipelineResourceBuffer> resourceBuffers(textures.size());
         std::vector<kobalt::PipelineResourceTextureSampler> resourceTextures(textures.size());
         for (size_t i = 0; i < textures.size(); ++i) {
+            resourceBuffers[i].binding = 0;
+            resourceBuffers[i].elementBase = i;
+            resourceBuffers[i].elementCount = 1;
+            resourceBuffers[i].type = kobalt::PipelineResourceType::Buffer;
+            resourceBuffers[i].access = kobalt::PipelineResourceAccess::Uniform;
+            resourceBuffers[i].offset = sizeof(Uniforms) * i;
+            resourceBuffers[i].range = sizeof(Uniforms);
+            resourceBuffers[i].buffer = uniformBuffer;
+
             resourceTextures[i].binding = 1;
             resourceTextures[i].elementBase = i;
             resourceTextures[i].elementCount = 1;
@@ -350,7 +356,7 @@ int main() {
         assert(kobalt::cmd::beginDynamicRenderPass(commandList, { 0, 0, static_cast<uint32_t>(w), static_cast<uint32_t>(h) }, 1, 0, &attachments[0], 1, &attachments[1], nullptr));
         
         assert(kobalt::cmd::bindPipeline(commandList, graphicsPipeline));
-        assert(kobalt::cmd::pushDynamicPipelineResources(commandList, graphicsPipeline, 0, resourceTextures.data(), static_cast<uint32_t>(resourceTextures.size()), &resourceBuffer, 1, nullptr, 0));
+        assert(kobalt::cmd::pushDynamicPipelineResources(commandList, graphicsPipeline, 0, resourceTextures.data(), static_cast<uint32_t>(resourceTextures.size()), resourceBuffers.data(), 1, nullptr, 0));
         
         assert(kobalt::cmd::bindVertexBuffer(commandList, 0, vertexBuffer, 0));
         assert(kobalt::cmd::bindIndexBuffer(commandList, vertexBuffer, sizeof(vertexData), kobalt::IndexType::Uint32));
@@ -358,9 +364,7 @@ int main() {
         assert(kobalt::cmd::setViewport(commandList, 0.0f, 0.0f, static_cast<float>(w), static_cast<float>(h), 0.0f, 1.0f));
         assert(kobalt::cmd::setScissor(commandList, 0, 0, w, h));
         
-        assert(kobalt::cmd::drawIndexed(commandList, 0, 0, 6));
-
-        assert(kobalt::cmd::drawIndexed(commandList, 0, 0, 6));
+        assert(kobalt::cmd::drawInstancedIndexed(commandList, 0, 0, 6, 0, textures.size()));
         
         assert(kobalt::cmd::endRenderPass(commandList));
 

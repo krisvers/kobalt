@@ -12,19 +12,20 @@ struct VertexOut {
     float2 texcoord : TEXCOORD;
     float3 color : COLOR;
     
-    uint instance : SV_InstanceID;
+    uint instanceID : SV_InstanceID;
 };
 
 [[vk::binding(0)]]
 cbuffer Uniforms {
-    float4x4 mvp;
+    float4x4 mvp[];
 };
 
-VertexOut vsmain(VertexIn vin) {
+VertexOut vsmain(VertexIn vin, uint instanceID : SV_InstanceID) {
     VertexOut vout;
-    vout.position = mul(mvp, float4(vin.position, 1.0));
+    vout.position = mul(mvp[instanceID], float4(vin.position, 1.0));
     vout.texcoord = vin.texcoord;
     vout.color = vin.color;
+    vout.instanceID = instanceID;
     return vout;
 }
 
@@ -40,6 +41,6 @@ SamplerState textureSamplers[];
 
 PixelOut psmain(VertexOut vout) {
     PixelOut pout;
-    pout.color = textures[vout.instance].Sample(textureSamplers[vout.instance], vout.texcoord);
+    pout.color = textures[vout.instanceID].Sample(textureSamplers[vout.instanceID], vout.texcoord);
     return pout;
 }

@@ -934,8 +934,9 @@ bool createSampler(Sampler& sampler, Device device, SampleFilter minFilter, Samp
 bool createTexture(Texture& texture, Device device, TextureDimensions dimensions, uint32_t width, uint32_t height, uint32_t depth, uint32_t layerCount, uint32_t mipCount, uint32_t samples, TextureFormat format, MemoryLocation location, TextureUsage usage);
 bool createTextureView(TextureView& view, Texture texture, TextureFormat format, TextureDimensions dimensions, ComponentMapping const* mapping, TextureSubresource const* subresource);
 
+bool uploadTextureData(Texture texture, uint32_t x, uint32_t y, uint32_t z, uint32_t width, uint32_t height, uint32_t depth, TextureSubresource const* subresource, void const* data);
+
 /* TODO: */
-bool uploadTextureData();
 bool downloadTextureData();
 bool copyTexture();
 
@@ -1000,6 +1001,9 @@ bool setScissor(CommandList commandList, uint32_t x, uint32_t y, uint32_t width,
 /* drawing */
 bool draw(CommandList commandList, uint32_t vertex, uint32_t count);
 bool drawIndexed(CommandList commandList, uint32_t index, int32_t offset, uint32_t count);
+
+bool drawInstanced(CommandList commandList, uint32_t vertex, uint32_t count, uint32_t instanceBase, uint32_t instanceCount);
+bool drawInstancedIndexed(CommandList commandList, uint32_t index, int32_t offset, uint32_t count, uint32_t instanceBase, uint32_t instanceCount);
 
 } /* namespace cmd */
 
@@ -2573,7 +2577,29 @@ struct StageSync_t {
 };
 
 struct RenderPass_t {
-    /* TODO: */
+    ObjectBase_t base;
+
+    Device_t* device;
+    VkRenderPass vkRenderPass;
+
+    RenderPass_t(Device_t* device, VkRenderPass vkRenderPass) : base(&device->base.obj, ObjectType::RenderPass, vkRenderPass), device(device), vkRenderPass(vkRenderPass) {}
+
+    ~RenderPass_t() {
+        vkDestroyRenderPass(device->vkDevice, vkRenderPass, nullptr);
+    }
+};
+
+struct Framebuffer_t {
+    ObjectBase_t base;
+
+    Device_t* device;
+    VkFramebuffer vkFramebuffer;
+
+    Framebuffer_t(Device_t* device, VkFramebuffer vkFramebuffer) : base(&device->base.obj, ObjectType::Framebuffer, vkFramebuffer), device(device), vkFramebuffer(vkFramebuffer) {}
+
+    ~Framebuffer_t() {
+        vkDestroyFramebuffer(device->vkDevice, vkFramebuffer, nullptr);
+    }
 };
 
 struct TextureBarrier {
@@ -3804,6 +3830,36 @@ bool createSwapchain(Swapchain& swapchain, Device device, GLFWwindow* window, ui
 #endif /* #ifdef KOBALT_GLFW */
 
 } /* namespace wsi */
+
+bool createRenderAttachmentState(RenderAttachmentState& renderAttachmentState, Device device, RenderAttachment const* renderAttachments, uint32_t renderAttachmentCount) {
+    if (device == nullptr) {
+        KOBALT_PRINT(DebugSeverity::Error, nullptr, "device is null");
+        return false;
+    }
+    
+    if (renderAttachments != nullptr) {
+        for (uint32_t i = 0; i < renderAttachmentCount; ++i) {
+            if (internal::textureFormatToVkFormat(renderAttachments[i].format) == VK_FORMAT_MAX_ENUM) {
+                KOBALT_PRINTF(DebugSeverity::Error, device, "renderAttachments[%u].format has invalid value: %u", i, static_cast<uint32_t>(renderAttachments[i].format));
+                return false;
+            }
+
+            if (renderAttachments[i].sampleCount == 0 || (renderAttachments[i].sampleCount & (renderAttachments[i].sampleCount - 1)) != 0) {
+                KOBALT_PRINTF(DebugSeverity::Error, device, "renderAttachments[%u].sampleCount has invalid value: %u; must be a power of 2", i, renderAttachments[i].sampleCount);
+                return false;
+            }
+
+        }
+    }
+}
+
+bool createRenderSubpass(RenderSubpass& subpass, Device device, RenderAttachmentReference const* inputAttachments, uint32_t inputAttachmentCount, RenderAttachmentReference const* renderTargets, uint32_t renderTargetCount, RenderAttachmentReference const* depthStencilTarget) {
+
+}
+
+bool createRenderPass(RenderPass& renderPass, Device device, RenderSubpass const* subpasses, uint32_t subpassCount, RenderAttachmentState renderAttachmentState) {
+
+}
 
 bool createShaderSPIRV(Shader& shader, Device device, uint32_t const* data, size_t size) {
     if (device == nullptr) {
@@ -5571,7 +5627,6 @@ bool beginRecordingCommandList(CommandList commandList) {
     return vkBeginCommandBuffer(cmdList->vkCmdBuffer, &beginInfo) == VK_SUCCESS;
 }
 
-/* TODO: secondary command list recording */
 bool beginRecordingSecondaryCommandList(CommandList commandList, RenderPass renderPass, uint32_t subpass, Framebuffer framebuffer, bool encapsulated) {
     if (commandList == nullptr) {
         KOBALT_PRINT(DebugSeverity::Error, nullptr, "commandList is null");
@@ -5579,19 +5634,21 @@ bool beginRecordingSecondaryCommandList(CommandList commandList, RenderPass rend
     }
 
     internal::CommandList_t* cmdList = reinterpret_cast<internal::CommandList_t*>(commandList);
+    internal::RenderPass_t* rp = reinterpret_cast<internal::RenderPass_t*>(renderPass);
+    internal::Framebuffer_t* fb = reinterpret_cast<internal::Framebuffer_t*>(framebuffer);
 
     VkCommandBufferInheritanceInfo inheritance = {};
     inheritance.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO;
-    inheritance.renderPass = nullptr;
+    inheritance.renderPass = rp->vkRenderPass;
+    inheritance.subpass = subpass;
+    inheritance.framebuffer = fb->vkFramebuffer;
 
     VkCommandBufferBeginInfo beginInfo = {};
     beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
     beginInfo.flags = encapsulated ? VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT : 0;
-    // beginInfo.pInheritanceInfo = nullptr;
-    
-    /* ... */
+    beginInfo.pInheritanceInfo = rp != nullptr || fb != nullptr ? &inheritance : nullptr;
 
-    return false;
+    return vkBeginCommandBuffer(cmdList->vkCmdBuffer, &beginInfo) == VK_SUCCESS;
 }
 
 bool recordSecondaryCommands(CommandList commandList, CommandList secondaryList) {
@@ -6385,6 +6442,32 @@ bool drawIndexed(CommandList commandList, uint32_t index, int32_t offset, uint32
     internal::Device_t* dev = cmdList->device;
 
     vkCmdDrawIndexed(cmdList->vkCmdBuffer, count, 1, index, offset, 0);
+    return true;
+}
+
+bool drawInstanced(CommandList commandList, uint32_t vertex, uint32_t count, uint32_t instanceBase, uint32_t instanceCount) {
+    if (commandList == nullptr) {
+        KOBALT_PRINT(DebugSeverity::Error, nullptr, "command list is null");
+        return false;
+    }
+
+    internal::CommandList_t* cmdList = reinterpret_cast<internal::CommandList_t*>(commandList);
+    internal::Device_t* dev = cmdList->device;
+
+    vkCmdDraw(cmdList->vkCmdBuffer, count, instanceCount, vertex, instanceBase);
+    return true;
+}
+
+bool drawInstancedIndexed(CommandList commandList, uint32_t index, int32_t offset, uint32_t count, uint32_t instanceBase, uint32_t instanceCount) {
+    if (commandList == nullptr) {
+        KOBALT_PRINT(DebugSeverity::Error, nullptr, "command list is null");
+        return false;
+    }
+
+    internal::CommandList_t* cmdList = reinterpret_cast<internal::CommandList_t*>(commandList);
+    internal::Device_t* dev = cmdList->device;
+
+    vkCmdDrawIndexed(cmdList->vkCmdBuffer, count, instanceCount, index, offset, instanceBase);
     return true;
 }
 

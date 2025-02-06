@@ -681,6 +681,15 @@ struct RenderAttachmentReference {
     TextureLayout layout;
 };
 
+struct RenderSubpassBarrier {
+    uint32_t srcSubpass;
+    uint32_t dstSubpass;
+    PipelineStage srcStages;
+    PipelineStage dstStages;
+    ResourceAccess srcAccess;
+    ResourceAccess dstAccess;
+};
+
 struct GraphicsPipelineAttachment {
     TextureFormat format;
     uint32_t sampleCount;
@@ -895,7 +904,7 @@ bool createSwapchain(Swapchain& swapchain, Device device, GLFWwindow* window, ui
 /* render pass */
 bool createRenderAttachmentState(RenderAttachmentState& renderAttachmentState, Device device, RenderAttachment const* renderAttachments, uint32_t renderAttachmentCount);
 bool createRenderSubpass(RenderSubpass& subpass, Device device, RenderAttachmentReference const* inputAttachments, uint32_t inputAttachmentCount, RenderAttachmentReference const* renderTargets, uint32_t renderTargetCount, RenderAttachmentReference const* depthStencilTarget);
-bool createRenderPass(RenderPass& renderPass, Device device, RenderSubpass const* subpasses, uint32_t subpassCount, RenderAttachmentState renderAttachmentState);
+bool createRenderPass(RenderPass& renderPass, Device device, RenderSubpass const* subpasses, uint32_t subpassCount, RenderAttachmentState renderAttachmentState, RenderSubpassBarrier const* barriers, uint32_t barrierCount);
 
 /* pipeline */
 bool createShaderSPIRV(Shader& shader, Device device, uint32_t const* data, size_t size);
@@ -2576,6 +2585,56 @@ struct StageSync_t {
     }
 };
 
+struct RenderAttachmentState_t {
+    ObjectBase_t base;
+    
+    std::vector<VkAttachmentDescription> attachments;
+    
+    RenderAttachmentState_t(Device device, RenderAttachment const* atts, uint32_t count) : base(device, ObjectType::RenderAttachmentState, nullptr) {
+        attachments.resize(count);
+        
+        for (uint32_t i = 0; i < count; ++i) {
+            attachments[i].format = internal::textureFormatToVkFormat(atts[i].format);
+            attachments[i].samples = static_cast<VkSampleCountFlagBits>(atts[i].sampleCount);
+            attachments[i].loadOp = internal::renderAttachmentLoadOpToVkAttachmentLoadOp(atts[i].loadOp);
+            attachments[i].storeOp = internal::renderAttachmentStoreOpToVkAttachmentStoreOp(atts[i].storeOp);
+            attachments[i].stencilLoadOp = internal::renderAttachmentLoadOpToVkAttachmentLoadOp(atts[i].stencilLoadOp);
+            attachments[i].stencilStoreOp = internal::renderAttachmentStoreOpToVkAttachmentStoreOp(atts[i].stencilStoreOp);
+            attachments[i].initialLayout = internal::textureLayoutToVkImageLayout(atts[i].initialLayout);
+            attachments[i].finalLayout = internal::textureLayoutToVkImageLayout(atts[i].finalLayout);
+        }
+    }
+};
+
+struct RenderSubpass_t {
+    ObjectBase_t base;
+    
+    std::vector<VkAttachmentReference> inputAttachments;
+    std::vector<VkAttachmentReference> colorAttachments;
+    
+    VkAttachmentReference depthStencilAttachment = {};
+    VkSubpassDescription description = {};
+    
+    RenderSubpass_t(Device device, RenderAttachmentReference const* ia, uint32_t iaCount, , RenderAttachmentReference const* rt, uint32_t rtCount, RenderAttachmentReference const* ds) : base(device, ObjectType::RenderSubpass, nullptr) {
+        inputAttachments.resize(iaCount);
+        colorAttachments.resize(rtCount);
+        
+        if (ia != nullptr) {
+            for (uint32_t i = 0; i < iaCount; ++i) {
+                inputAttachments[i].attachment = ia[i].index;
+                inputAttachments[i].layout = internal::textureLayoutToVkImageLayout(ia[i].layout);
+            }
+        }
+        
+        if (rt != nullptr) {
+            for (uint32_t i = 0; i < rtCount; ++i) {
+                colorAttachments[i].attachment = rt[i].index;
+                colorAttachments[i].layout = internal::textureLayoutToVkImageLayout(rt[i].layout);
+            }
+        }
+    }
+};
+
 struct RenderPass_t {
     ObjectBase_t base;
 
@@ -3848,17 +3907,103 @@ bool createRenderAttachmentState(RenderAttachmentState& renderAttachmentState, D
                 KOBALT_PRINTF(DebugSeverity::Error, device, "renderAttachments[%u].sampleCount has invalid value: %u; must be a power of 2", i, renderAttachments[i].sampleCount);
                 return false;
             }
-
+            
+            if (internal::renderAttachmentLoadOpToVkAttachmentLoadOp(renderAttachments[i].loadOp) == VK_ATTACHMENT_LOAD_OP_MAX_ENUM) {
+                KOBALT_PRINTF(DebugSeverity::Error, device, "renderAttachments[%u].loadOp has invalid value: %u", i, static_cast<uint32_t>(renderAttachments[i].loadOp));
+                return false;
+            }
+            
+            if (internal::renderAttachmentStoreOpToVkAttachmentStoreOp(renderAttachments[i].storeOp) == VK_ATTACHMENT_STORE_OP_MAX_ENUM) {
+                KOBALT_PRINTF(DebugSeverity::Error, device, "renderAttachments[%u].storeOp has invalid value: %u", i, static_cast<uint32_t>(renderAttachments[i].storeOp));
+                return false;
+            }
+            
+            if (internal::renderAttachmentLoadOpToVkAttachmentLoadOp(renderAttachments[i].stencilLoadOp) == VK_ATTACHMENT_LOAD_OP_MAX_ENUM) {
+                KOBALT_PRINTF(DebugSeverity::Error, device, "renderAttachments[%u].stencilLoadOp has invalid value: %u", i, static_cast<uint32_t>(renderAttachments[i].stencilLoadOp));
+                return false;
+            }
+            
+            if (internal::renderAttachmentStoreOpToVkAttachmentStoreOp(renderAttachments[i].stencilStoreOp) == VK_ATTACHMENT_STORE_OP_MAX_ENUM) {
+                KOBALT_PRINTF(DebugSeverity::Error, device, "renderAttachments[%u].stencilStoreOp has invalid value: %u", i, static_cast<uint32_t>(renderAttachments[i].stencilStoreOp));
+                return false;
+            }
+            
+            if (internal::textureLayoutToVkImageLayout(renderAttachments[i].initialLayout) == VK_IMAGE_LAYOUT_MAX_ENUM) {
+                KOBALT_PRINTF(DebugSeverity::Error, device, "renderAttachments[%u].initialLayout has invalid value: %u", i, static_cast<uint32_t>(renderAttachments[i].initialLayout));
+                return false;
+            }
+            
+            if (internal::textureLayoutToVkImageLayout(renderAttachments[i].finalLayout) == VK_IMAGE_LAYOUT_MAX_ENUM) {
+                KOBALT_PRINTF(DebugSeverity::Error, device, "renderAttachments[%u].finalLayout has invalid value: %u", i, static_cast<uint32_t>(renderAttachments[i].finalLayout));
+                return false;
+            }
         }
     }
+    
+    renderAttachmentState = &(new internal::RenderAttachmentState_t(device, renderAttachments, renderAttachmentCount))->base.obj;
+    return true;
 }
 
 bool createRenderSubpass(RenderSubpass& subpass, Device device, RenderAttachmentReference const* inputAttachments, uint32_t inputAttachmentCount, RenderAttachmentReference const* renderTargets, uint32_t renderTargetCount, RenderAttachmentReference const* depthStencilTarget) {
-
+    if (device == nullptr) {
+        KOBALT_PRINT(DebugSeverity::Error, nullptr, "device is null");
+        return false;
+    }
+    
+    if (inputAttachments != nullptr) {
+        for (uint32_t i = 0; i < inputAttachmentCount; ++i) {
+            if (internal::textureLayoutToVkImageLayout(inputAttachments[i].layout) == VK_IMAGE_LAYOUT_MAX_ENUM) {
+                KOBALT_PRINTF(DebugSeverity::Error, device, "inputAttachments[%u].layout has invalid value: %u", i, static_cast<uint32_t>(inputAttachments[i].layout));
+                return false;
+            }
+        }
+    }
+    
+    if (renderTargets != nullptr) {
+        for (uint32_t i = 0; i < renderTargetCount; ++i) {
+            if (internal::textureLayoutToVkImageLayout(renderTargets[i].layout) == VK_IMAGE_LAYOUT_MAX_ENUM) {
+                KOBALT_PRINTF(DebugSeverity::Error, device, "renderTargets[%u].layout has invalid value: %u", i, static_cast<uint32_t>(renderTargets[i].layout));
+                return false;
+            }
+        }
+    }
+    
+    if (depthStencilTarget != nullptr) {
+        if (internal::textureLayoutToVkImageLayout(depthStencilTarget->layout) == VK_IMAGE_LAYOUT_MAX_ENUM) {
+            KOBALT_PRINTF(DebugSeverity::Error, device, "depthStencilTarget->layout has invalid value: %u", static_cast<uint32_t>(depthStencilTarget->layout));
+            return false;
+        }
+    }
+    
+    subpass = &(new internal::RenderSubpass_t(device, inputAttachments, inputAttachmentCount, renderTargets, renderTargetCount, depthStencilTarget))->base.obj;
+    return true;
 }
 
-bool createRenderPass(RenderPass& renderPass, Device device, RenderSubpass const* subpasses, uint32_t subpassCount, RenderAttachmentState renderAttachmentState) {
-
+bool createRenderPass(RenderPass& renderPass, Device device, RenderSubpass const* subpasses, uint32_t subpassCount, RenderAttachmentState renderAttachmentState, RenderSubpassBarrier const* barriers, uint32_t barrierCount) {
+    if (device == nullptr) {
+        KOBALT_PRINT(DebugSeverity::Error, nullptr, "device is null");
+        return false;
+    }
+    
+    if (subpasses == nullptr) {
+        KOBALT_PRINT(DebugSeverity::Error, device, "subpasses is null");
+        return false;
+    }
+    
+    if (subpassCount == 0) {
+        KOBALT_PRINT(DebugSeverity::Error, device, "subpassCount is 0");
+        return false;
+    }
+    
+    for (uint32_t i = 0; i < subpassCount; ++i) {
+        if (subpasses[i] == nullptr) {
+            KOBALT_PRINTF(DebugSeverity::Error, device, "subpasses[%u] is null", i);
+            return false;
+        }
+        
+        internal::RenderSubpass_t* rsp = reinterpret_cast<internal::RenderSubpass_t*>(subpasses[i]);
+        
+    }
 }
 
 bool createShaderSPIRV(Shader& shader, Device device, uint32_t const* data, size_t size) {
